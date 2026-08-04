@@ -36,7 +36,13 @@ def login_user(db: Session, user: UserLogin):
     if not db_user:
         return None
 
-    if not verify_password(user.password, db_user.hashed_password):
+    print("Entered password:", user.password)
+    print("Stored hash:", db_user.hashed_password)
+
+    result = verify_password(user.password, db_user.hashed_password)
+    print("Password match:", result)
+
+    if not result:
         return None
 
     token = create_access_token({"sub": db_user.username})
