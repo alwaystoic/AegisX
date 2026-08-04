@@ -5,6 +5,7 @@ from app.db.postgres import engine
 from app.db.base import Base
 
 from app.features.users.router import router as users_router
+from app.features.databases.router import router as databases_router
 
 
 Base.metadata.create_all(bind=engine)
@@ -17,6 +18,7 @@ app = FastAPI(
 )
 
 app.include_router(users_router)
+app.include_router(databases_router)
 
 
 @app.get("/")

@@ -7,3 +7,4 @@ class Base(DeclarativeBase):
 
 # Import all models here
 from app.models.user import User
+from app.models.database import Database
