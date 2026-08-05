@@ -10,6 +10,7 @@ from app.features.incidents.router import router as incidents_router
 from app.features.scan.router import router as scan_router
 from app.features.threat.router import router as threat_router
 from app.features.audit.router import router as audit_router
+from app.features.analyzer.router import router as analyzer_router
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)
@@ -27,6 +28,7 @@ app.include_router(incidents_router)
 app.include_router(scan_router)
 app.include_router(threat_router)
 app.include_router(audit_router)
+app.include_router(analyzer_router)
 
 @app.get("/")
 def root():
