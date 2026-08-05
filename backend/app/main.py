@@ -6,10 +6,9 @@ from app.db.base import Base
 
 from app.features.users.router import router as users_router
 from app.features.databases.router import router as databases_router
-
+from app.features.incidents.router import router as incidents_router
 
 Base.metadata.create_all(bind=engine)
-
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -19,6 +18,7 @@ app = FastAPI(
 
 app.include_router(users_router)
 app.include_router(databases_router)
+app.include_router(incidents_router)
 
 
 @app.get("/")
