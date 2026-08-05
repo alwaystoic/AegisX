@@ -17,8 +17,13 @@ def create_scan(db: Session, scan: ScanCreate):
         severity="Low",
         vulnerabilities_found=0,
         recommendation=(
-            f"Connected successfully. "
-            f"PostgreSQL Version: {health['postgres_version']}"
+            f"Database Health Summary:\n"
+            f"Version: {health['postgres_version']}\n"
+            f"Database Size: {health['database_size']}\n"
+            f"Active Connections: {health['active_connections']}\n"
+            f"Uptime: {health['uptime']}\n"
+            f"SSL: {health['ssl_status']}\n"
+            f"Extensions: {health['extensions']}"
         ),
     )
 
