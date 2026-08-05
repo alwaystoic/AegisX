@@ -9,3 +9,4 @@ class Base(DeclarativeBase):
 from app.models.user import User
 from app.models.database import Database
 from app.models.incident import Incident
+from app.models.scan import Scan

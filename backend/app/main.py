@@ -7,7 +7,9 @@ from app.db.base import Base
 from app.features.users.router import router as users_router
 from app.features.databases.router import router as databases_router
 from app.features.incidents.router import router as incidents_router
+from app.features.scan.router import router as scan_router
 
+# Create all database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -16,9 +18,11 @@ app = FastAPI(
     version=settings.APP_VERSION,
 )
 
+# Register routers
 app.include_router(users_router)
 app.include_router(databases_router)
 app.include_router(incidents_router)
+app.include_router(scan_router)
 
 
 @app.get("/")
@@ -39,5 +43,5 @@ def health():
         "status": "Healthy",
         "postgres": postgres_status,
         "mongodb": mongodb_status,
-        "ai": "Ready"
+        "ai": "Ready",
     }
