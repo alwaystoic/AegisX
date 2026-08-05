@@ -3,18 +3,23 @@ from sqlalchemy.orm import Session
 from app.models.scan import Scan
 from app.features.scan.schemas import ScanCreate, ScanUpdate
 
-from app.utils.scanner import test_database_connection
+from app.utils.scanner import collect_database_health
 
 
 def create_scan(db: Session, scan: ScanCreate):
-    result = test_database_connection(db)
+
+    health = collect_database_health(db)
+
     db_scan = Scan(
         scan_name=scan.scan_name,
-        database_name=scan.database_name,
-        status=result["status"],
+        database_name=health["database_name"],
+        status="Completed",
         severity="Low",
         vulnerabilities_found=0,
-        recommendation="No recommendations yet.",
+        recommendation=(
+            f"Connected successfully. "
+            f"PostgreSQL Version: {health['postgres_version']}"
+        ),
     )
 
     db.add(db_scan)

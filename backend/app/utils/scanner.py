@@ -2,20 +2,46 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 
-def test_database_connection(db: Session):
+def collect_database_health(db: Session):
     """
-    Tests whether PostgreSQL is reachable.
+    Collect basic PostgreSQL health information.
     """
 
-    try:
-        db.execute(text("SELECT 1"))
-        return {
-            "status": "Connected",
-            "message": "Database connection successful."
-        }
+    version = db.execute(
+        text("SELECT version();")
+    ).scalar()
 
-    except Exception as e:
-        return {
-            "status": "Failed",
-            "message": str(e)
-        }
+    database_name = db.execute(
+        text("SELECT current_database();")
+    ).scalar()
+
+    current_user = db.execute(
+        text("SELECT current_user;")
+    ).scalar()
+
+    database_size = db.execute(
+        text(
+            """
+            SELECT pg_size_pretty(
+                pg_database_size(current_database())
+            );
+            """
+        )
+    ).scalar()
+
+    active_connections = db.execute(
+        text(
+            """
+            SELECT COUNT(*)
+            FROM pg_stat_activity;
+            """
+        )
+    ).scalar()
+
+    return {
+        "postgres_version": version,
+        "database_name": database_name,
+        "current_user": current_user,
+        "database_size": database_size,
+        "active_connections": active_connections,
+    }
