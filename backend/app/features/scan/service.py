@@ -1,19 +1,17 @@
 from sqlalchemy.orm import Session
 
 from app.models.scan import Scan
+from app.features.scan.schemas import ScanCreate, ScanUpdate
 
-from app.features.scan.schemas import (
-    ScanCreate,
-    ScanUpdate,
-)
+from app.utils.scanner import test_database_connection
 
 
 def create_scan(db: Session, scan: ScanCreate):
-
+    result = test_database_connection(db)
     db_scan = Scan(
         scan_name=scan.scan_name,
         database_name=scan.database_name,
-        status="Pending",
+        status=result["status"],
         severity="Low",
         vulnerabilities_found=0,
         recommendation="No recommendations yet.",
