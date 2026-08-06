@@ -8,5 +8,6 @@ class QueryRequest(BaseModel):
 class QueryAnalysisResponse(BaseModel):
     safe: bool
     severity: str
+    risk_score: int
     threat: str
     recommendation: str
