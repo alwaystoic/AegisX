@@ -12,8 +12,12 @@ from app.features.threat.router import router as threat_router
 from app.features.audit.router import router as audit_router
 from app.features.analyzer.router import router as analyzer_router
 
+
 from app.features.threat_detection.router import (
     router as threat_detection_router,
+)
+from app.features.ai.router import (
+    router as ai_router,
 )
 
 # Create all database tables
@@ -34,6 +38,7 @@ app.include_router(threat_router)
 app.include_router(audit_router)
 app.include_router(analyzer_router)
 app.include_router(threat_detection_router)
+app.include_router(ai_router)
 
 @app.get("/")
 def root():
