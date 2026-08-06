@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from app.utils.scanner import collect_database_health
 
 from app.features.analyzer.service import analyze_query
-from app.features.analyzer.schemas import QueryRequest
 
 from app.features.threat_detection.service import detect_threat
 from app.features.threat_detection.schemas import (
@@ -14,6 +13,7 @@ from app.features.ai.service import generate_recommendation
 from app.features.ai.schemas import AIRecommendationRequest
 
 from app.services.response_engine import determine_actions
+
 
 def run_security_pipeline(
     db: Session,
@@ -29,6 +29,8 @@ def run_security_pipeline(
     Threat Detection
         ↓
     AI Recommendation
+        ↓
+    Response Engine
     """
 
     # ----------------------------------
@@ -54,7 +56,12 @@ def run_security_pipeline(
 
     threat_result = detect_threat(
         ThreatDetectionRequest(
-            vulnerability_count=critical + high + medium + low,
+            vulnerability_count=(
+                critical
+                + high
+                + medium
+                + low
+            ),
             critical_count=critical,
             high_count=high,
             medium_count=medium,
@@ -73,6 +80,10 @@ def run_security_pipeline(
         )
     )
 
+    # ----------------------------------
+    # Step 5 - Build Pipeline Result
+    # ----------------------------------
+
     pipeline_result = {
         "database_health": health,
         "sql_analysis": analyzer_result.model_dump(),
@@ -80,8 +91,13 @@ def run_security_pipeline(
         "ai_recommendation": ai_result.model_dump(),
     }
 
+    # ----------------------------------
+    # Step 6 - Execute Automated Actions
+    # ----------------------------------
+
     response_actions = determine_actions(
-        pipeline_result
+        db,
+        pipeline_result,
     )
 
     pipeline_result["response_actions"] = response_actions
