@@ -13,6 +13,7 @@ from app.features.threat_detection.schemas import (
 from app.features.ai.service import generate_recommendation
 from app.features.ai.schemas import AIRecommendationRequest
 
+from app.services.response_engine import determine_actions
 
 def run_security_pipeline(
     db: Session,
@@ -72,9 +73,17 @@ def run_security_pipeline(
         )
     )
 
-    return {
+    pipeline_result = {
         "database_health": health,
         "sql_analysis": analyzer_result.model_dump(),
         "threat_detection": threat_result.model_dump(),
         "ai_recommendation": ai_result.model_dump(),
     }
+
+    response_actions = determine_actions(
+        pipeline_result
+    )
+
+    pipeline_result["response_actions"] = response_actions
+
+    return pipeline_result
