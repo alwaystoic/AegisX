@@ -4,24 +4,48 @@ from app.features.scheduler.schemas import (
     SchedulerStatusResponse,
 )
 
-# ----------------------------------
+from app.utils.task_scheduler import (
+    start_scheduler as aps_start_scheduler,
+    stop_scheduler as aps_stop_scheduler,
+    add_job,
+    remove_job,
+)
+
+# -------------------------------
 # Scheduler State
-# ----------------------------------
+# -------------------------------
 
 scheduler_running = False
-
-interval_minutes = 30
-
+interval_minutes = 1
 last_run = None
-
 next_run = None
 
 
-def get_scheduler_status() -> SchedulerStatusResponse:
+def scheduled_security_pipeline():
     """
-    Returns the current scheduler status.
+    This function will be executed automatically
+    by APScheduler every interval.
     """
 
+    global last_run
+    global next_run
+
+    print("Running scheduled security pipeline...")
+
+    # TODO:
+    # Call your security pipeline here
+    # Example:
+    # run_security_pipeline(...)
+
+    last_run = datetime.utcnow().isoformat()
+
+    next_run = (
+        datetime.utcnow()
+        + timedelta(minutes=interval_minutes)
+    ).isoformat()
+
+
+def get_scheduler_status():
     return SchedulerStatusResponse(
         scheduler_running=scheduler_running,
         interval_minutes=interval_minutes,
@@ -31,49 +55,42 @@ def get_scheduler_status() -> SchedulerStatusResponse:
 
 
 def start_scheduler():
-    """
-    Starts the scheduler.
-    """
 
     global scheduler_running
     global next_run
 
-    scheduler_running = True
+    if not scheduler_running:
 
-    next_run = (
-        datetime.utcnow() +
-        timedelta(minutes=interval_minutes)
-    ).isoformat()
+        aps_start_scheduler()
+
+        add_job(
+            scheduled_security_pipeline,
+            minutes=interval_minutes,
+        )
+
+        scheduler_running = True
+
+        next_run = (
+            datetime.utcnow()
+            + timedelta(minutes=interval_minutes)
+        ).isoformat()
 
     return get_scheduler_status()
 
 
 def stop_scheduler():
-    """
-    Stops the scheduler.
-    """
 
     global scheduler_running
     global next_run
 
-    scheduler_running = False
+    if scheduler_running:
 
-    next_run = None
+        remove_job()
+
+        aps_stop_scheduler()
+
+        scheduler_running = False
+
+        next_run = None
 
     return get_scheduler_status()
-
-
-def update_last_run():
-    """
-    Updates scheduler execution time.
-    """
-
-    global last_run
-    global next_run
-
-    last_run = datetime.utcnow().isoformat()
-
-    next_run = (
-        datetime.utcnow() +
-        timedelta(minutes=interval_minutes)
-    ).isoformat()
