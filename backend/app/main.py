@@ -28,6 +28,9 @@ from app.features.dashboard.router import (
 from app.features.reports.router import (
     router as reports_router,
 )
+from app.features.scheduler.router import (
+    router as scheduler_router,
+)
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)
@@ -51,6 +54,7 @@ app.include_router(ai_router)
 app.include_router(pipeline_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+app.include_router(scheduler_router)
 
 @app.get("/")
 def root():
