@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.features.incidents.service import create_incident
 from app.features.incidents.schemas import IncidentCreate
-
+from app.features.audit.service import create_audit_log
+from app.features.audit.schemas import AuditLogCreate
 
 def determine_actions(
     db: Session,
@@ -35,6 +36,16 @@ def determine_actions(
             ),
         )
 
+        create_audit_log(
+            db,
+            AuditLogCreate(
+                username="system",
+                action="Automatic Incident Creation",
+                resource="Security Pipeline",
+                details="Critical threat detected. Incident created automatically.",
+            ),
+        )
+
         actions.extend(
             [
                 "incident_created",
@@ -56,6 +67,16 @@ def determine_actions(
             ),
         )
 
+        create_audit_log(
+    db,
+    AuditLogCreate(
+        username="system",
+        action="Automatic Incident Creation",
+        resource="Security Pipeline",
+        details="High-risk threat detected. Incident created automatically.",
+    ),
+)
+
         actions.extend(
             [
                 "incident_created",
@@ -65,9 +86,19 @@ def determine_actions(
 
     elif risk == "Medium":
 
-        actions.append(
-            "write_audit_log"
+        create_audit_log(
+            db,
+            AuditLogCreate(
+                username="system",
+                action="Security Scan",
+                resource="Security Pipeline",
+                details="Medium-risk threat detected.",
+            ),
         )
+
+    actions.append(
+    "write_audit_log"
+    )
 
     return {
         "overall_risk": risk,
