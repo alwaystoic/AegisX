@@ -17,6 +17,12 @@ from app.utils.pdf_generator import (
     generate_security_report_pdf,
 )
 
+from fastapi.responses import Response
+
+from app.utils.csv_generator import (
+    generate_security_report_csv,
+)
+
 router = APIRouter(
     prefix="/reports",
     tags=["Reports"],
@@ -48,5 +54,24 @@ def download_security_report_pdf(
         headers={
             "Content-Disposition":
                 "attachment; filename=AegisX_Security_Report.pdf"
+        },
+    )
+
+@router.get(
+    "/security/csv",
+)
+def download_security_report_csv(
+    db: Session = Depends(get_db),
+):
+    report = generate_security_report(db)
+
+    csv_data = generate_security_report_csv(report)
+
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=AegisX_Security_Report.csv"
         },
     )
