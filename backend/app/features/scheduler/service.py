@@ -11,6 +11,10 @@ from app.utils.task_scheduler import (
     remove_job,
 )
 
+from app.utils.scheduled_tasks import (
+    run_security_pipeline_task,
+)
+
 # -------------------------------
 # Scheduler State
 # -------------------------------
@@ -23,19 +27,13 @@ next_run = None
 
 def scheduled_security_pipeline():
     """
-    This function will be executed automatically
-    by APScheduler every interval.
+    Executes the scheduled security pipeline.
     """
 
     global last_run
     global next_run
 
-    print("Running scheduled security pipeline...")
-
-    # TODO:
-    # Call your security pipeline here
-    # Example:
-    # run_security_pipeline(...)
+    run_security_pipeline_task()
 
     last_run = datetime.utcnow().isoformat()
 
