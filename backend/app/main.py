@@ -25,6 +25,10 @@ from app.features.pipeline.router import (
 from app.features.dashboard.router import (
     router as dashboard_router,
 )
+from app.features.reports.router import (
+    router as reports_router,
+)
+
 # Create all database tables
 Base.metadata.create_all(bind=engine)
 
@@ -46,6 +50,7 @@ app.include_router(threat_detection_router)
 app.include_router(ai_router)
 app.include_router(pipeline_router)
 app.include_router(dashboard_router)
+app.include_router(reports_router)
 
 @app.get("/")
 def root():
