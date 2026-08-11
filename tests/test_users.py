@@ -98,3 +98,18 @@ def test_get_current_user():
     assert data["email"] == "login_test_user@example.com"
     assert data["full_name"] == "Login Test User"
     assert data["is_active"] is True
+
+def test_get_current_user_without_token():
+    response = client.get("/users/me")
+
+    assert response.status_code == 401
+
+def test_get_current_user_invalid_token():
+    response = client.get(
+        "/users/me",
+        headers={
+            "Authorization": "Bearer invalid_token_here",
+        },
+    )
+
+    assert response.status_code == 401
