@@ -18,6 +18,7 @@ from app.features.users.service import (
     login_user,
 )
 
+
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
@@ -25,8 +26,20 @@ router = APIRouter(
 
 
 @router.post("/", response_model=UserResponse)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    return create_user(db, user)
+def register_user(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
+    created_user = create_user(db, user)
+
+    if created_user is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Username or email already registered"
+        )
+
+    return created_user
+
 
 @router.post("/login", response_model=Token)
 def login(
@@ -48,6 +61,9 @@ def login(
 
     return token
 
+
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(
+    current_user: User = Depends(get_current_user)
+):
     return current_user
