@@ -85,6 +85,16 @@ def analyze_query(query: str) -> QueryAnalysisResponse:
             "Grant only the minimum required permissions."
         )
 
+# xp_cmdshell
+    elif "XP_CMDSHELL" in sql:
+        safe = False
+        severity = "Critical"
+        risk_score = 100
+        threat = "xp_cmdshell detected."
+        recommendation = (
+            "Disable xp_cmdshell unless absolutely required."
+        )
+
     # EXEC / EXECUTE
     elif "EXEC " in sql or "EXECUTE " in sql:
         safe = False
@@ -93,16 +103,6 @@ def analyze_query(query: str) -> QueryAnalysisResponse:
         threat = "EXEC statement detected."
         recommendation = (
             "Review the executed procedure for security."
-        )
-
-    # xp_cmdshell
-    elif "XP_CMDSHELL" in sql:
-        safe = False
-        severity = "Critical"
-        risk_score = 100
-        threat = "xp_cmdshell detected."
-        recommendation = (
-            "Disable xp_cmdshell unless absolutely required."
         )
 
     # UNION SELECT
