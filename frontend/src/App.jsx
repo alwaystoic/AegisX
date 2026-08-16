@@ -24,6 +24,7 @@ import {
 
 import Databases from "./pages/Databases";
 import Scans from "./pages/Scans";
+import Threats from "./pages/Threats";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -564,6 +565,12 @@ function App() {
       ========================= */}
 
       {activePage === "Scans" && <Scans />}
+
+      {/* =========================
+    THREATS
+========================= */}
+
+{activePage === "Threats" && <Threats />}
 
       {/* =========================
           PLACEHOLDER PAGES
