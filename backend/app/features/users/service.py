@@ -38,9 +38,8 @@ def create_user(db: Session, user: UserCreate):
         db.commit()
         db.refresh(db_user)
 
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
-        print("INTEGRITY ERROR:", e)
         return None
 
     return db_user
