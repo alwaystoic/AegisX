@@ -26,6 +26,7 @@ import Databases from "./pages/Databases";
 import Scans from "./pages/Scans";
 import Threats from "./pages/Threats";
 import Incidents from "./pages/Incidents";
+import AIRecommendations from "./pages/AIRecommendations";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -669,29 +670,32 @@ function App() {
         )}
 
         {/* =========================
-            PLACEHOLDER PAGES
-        ========================= */}
+    AI RECOMMENDATIONS
+========================= */}
 
-        {activePage !== "Dashboard" &&
-          activePage !== "Databases" &&
-          activePage !== "Scans" &&
-          activePage !== "Threats" &&
-          activePage !== "Incidents" && (
-            <section className="content">
+{activePage === "AI Recommendations" && (
+  <AIRecommendations />
+)}
 
-              <div className="panel placeholder-panel">
+{/* =========================
+    PLACEHOLDER PAGES
+========================= */}
 
-                <h3>{activePage}</h3>
-
-                <p>
-                  This AegisX module is ready for
-                  integration.
-                </p>
-
-              </div>
-
-            </section>
-          )}
+{activePage !== "Dashboard" &&
+  activePage !== "Databases" &&
+  activePage !== "Scans" &&
+  activePage !== "Threats" &&
+  activePage !== "Incidents" &&
+  activePage !== "AI Recommendations" && (
+    <section className="content">
+      <div className="panel placeholder-panel">
+        <h3>{activePage}</h3>
+        <p>
+          This AegisX module is ready for integration.
+        </p>
+      </div>
+    </section>
+  )}
 
       </main>
 
