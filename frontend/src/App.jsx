@@ -25,6 +25,7 @@ import {
 import Databases from "./pages/Databases";
 import Scans from "./pages/Scans";
 import Threats from "./pages/Threats";
+import Incidents from "./pages/Incidents";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -67,10 +68,6 @@ function App() {
     setLoggingIn(true);
 
     try {
-      /*
-       * FastAPI OAuth2PasswordRequestForm expects
-       * application/x-www-form-urlencoded data.
-       */
       const formData = new URLSearchParams();
 
       formData.append("username", username.trim());
@@ -93,10 +90,11 @@ function App() {
       }
 
       if (!data.access_token) {
-        throw new Error("Login succeeded but no access token was returned.");
+        throw new Error(
+          "Login succeeded but no access token was returned."
+        );
       }
 
-      // Store authentication token for all protected API requests.
       localStorage.setItem("access_token", data.access_token);
 
       if (data.token_type) {
@@ -110,6 +108,7 @@ function App() {
       setPassword("");
     } catch (error) {
       console.error("Login error:", error);
+
       setLoginError(
         error.message || "Unable to connect to the AegisX backend."
       );
@@ -154,6 +153,7 @@ function App() {
 
           <div className="login-heading">
             <h2>Welcome back</h2>
+
             <p>
               Sign in to access the AegisX security operations platform.
             </p>
@@ -171,7 +171,9 @@ function App() {
                   type="text"
                   placeholder="Enter your username"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  onChange={(event) =>
+                    setUsername(event.target.value)
+                  }
                   autoComplete="username"
                   disabled={loggingIn}
                 />
@@ -189,7 +191,9 @@ function App() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
                   autoComplete="current-password"
                   disabled={loggingIn}
                 />
@@ -197,7 +201,9 @@ function App() {
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() => setShowPassword((previous) => !previous)}
+                  onClick={() =>
+                    setShowPassword((previous) => !previous)
+                  }
                   disabled={loggingIn}
                   aria-label={
                     showPassword
@@ -228,7 +234,10 @@ function App() {
             >
               {loggingIn ? (
                 <>
-                  <Loader2 size={18} className="login-spinner" />
+                  <Loader2
+                    size={18}
+                    className="login-spinner"
+                  />
                   Signing in...
                 </>
               ) : (
@@ -257,6 +266,7 @@ function App() {
 
   return (
     <div className="app">
+
       {/* =========================
           SIDEBAR
       ========================= */}
@@ -295,7 +305,10 @@ function App() {
         </nav>
 
         <div className="sidebar-bottom">
-          <button className="nav-item">
+          <button
+            className="nav-item"
+            onClick={() => setActivePage("Settings")}
+          >
             <Settings size={19} />
             <span>Settings</span>
           </button>
@@ -315,13 +328,17 @@ function App() {
       ========================= */}
 
       <main className="main">
+
         {/* =========================
             TOPBAR
         ========================= */}
 
         <header className="topbar">
           <div>
-            <p className="breadcrumb">Security Operations</p>
+            <p className="breadcrumb">
+              Security Operations
+            </p>
+
             <h2>{activePage}</h2>
           </div>
 
@@ -336,8 +353,10 @@ function App() {
 
               <div>
                 <strong>
-                  {localStorage.getItem("username") || "Administrator"}
+                  {localStorage.getItem("username") ||
+                    "Administrator"}
                 </strong>
+
                 <span>Security Analyst</span>
               </div>
             </div>
@@ -350,12 +369,14 @@ function App() {
 
         {activePage === "Dashboard" && (
           <section className="content">
+
             <div className="welcome">
               <div>
                 <h3>Security Overview</h3>
 
                 <p>
-                  Monitor your infrastructure, threats and security posture.
+                  Monitor your infrastructure, threats and
+                  security posture.
                 </p>
               </div>
 
@@ -370,6 +391,7 @@ function App() {
             ========================= */}
 
             <div className="stats-grid">
+
               <div className="stat-card">
                 <div className="stat-icon score">
                   <ShieldAlert size={22} />
@@ -380,7 +402,9 @@ function App() {
                   <strong>85</strong>
                 </div>
 
-                <small>Good security posture</small>
+                <small>
+                  Good security posture
+                </small>
               </div>
 
               <div className="stat-card">
@@ -393,7 +417,9 @@ function App() {
                   <strong>12</strong>
                 </div>
 
-                <small>Active users</small>
+                <small>
+                  Active users
+                </small>
               </div>
 
               <div className="stat-card">
@@ -406,7 +432,9 @@ function App() {
                   <strong>4</strong>
                 </div>
 
-                <small>Connected databases</small>
+                <small>
+                  Connected databases
+                </small>
               </div>
 
               <div className="stat-card">
@@ -419,8 +447,11 @@ function App() {
                   <strong>48</strong>
                 </div>
 
-                <small>Security scans performed</small>
+                <small>
+                  Security scans performed
+                </small>
               </div>
+
             </div>
 
             {/* =========================
@@ -428,11 +459,16 @@ function App() {
             ========================= */}
 
             <div className="dashboard-grid">
+
               <section className="panel security-panel">
+
                 <div className="panel-header">
                   <div>
                     <h3>Security Status</h3>
-                    <p>Current system security posture</p>
+
+                    <p>
+                      Current system security posture
+                    </p>
                   </div>
 
                   <span className="healthy-badge">
@@ -441,60 +477,86 @@ function App() {
                 </div>
 
                 <div className="score-container">
+
                   <div className="score-circle">
                     <strong>85</strong>
                     <span>/ 100</span>
                   </div>
 
                   <div className="score-details">
-                    <h4>Good Security Posture</h4>
+                    <h4>
+                      Good Security Posture
+                    </h4>
 
                     <p>
-                      Your infrastructure is currently operating within a
-                      healthy security range.
+                      Your infrastructure is currently
+                      operating within a healthy security
+                      range.
                     </p>
                   </div>
+
                 </div>
+
               </section>
 
               <section className="panel threat-panel">
+
                 <div className="panel-header">
                   <div>
                     <h3>Threat Overview</h3>
-                    <p>Detected security threats</p>
+
+                    <p>
+                      Detected security threats
+                    </p>
                   </div>
                 </div>
 
                 <div className="threat-stats">
+
                   <div>
                     <span className="threat-number critical">
                       2
                     </span>
-                    <small>Critical</small>
+
+                    <small>
+                      Critical
+                    </small>
                   </div>
 
                   <div>
                     <span className="threat-number high">
                       5
                     </span>
-                    <small>High</small>
+
+                    <small>
+                      High
+                    </small>
                   </div>
 
                   <div>
                     <span className="threat-number medium">
                       8
                     </span>
-                    <small>Medium</small>
+
+                    <small>
+                      Medium
+                    </small>
                   </div>
 
                   <div>
                     <span className="threat-number low">
                       12
                     </span>
-                    <small>Low</small>
+
+                    <small>
+                      Low
+                    </small>
                   </div>
+
                 </div>
+
               </section>
+
             </div>
 
             {/* =========================
@@ -502,9 +564,14 @@ function App() {
             ========================= */}
 
             <section className="panel pipeline-panel">
+
               <div className="panel-header">
+
                 <div>
-                  <h3>Security Pipeline</h3>
+                  <h3>
+                    Security Pipeline
+                  </h3>
+
                   <p>
                     Automated security analysis workflow
                   </p>
@@ -514,81 +581,120 @@ function App() {
                   <span className="status-dot"></span>
                   Running
                 </span>
+
               </div>
 
               <div className="pipeline">
+
                 <div className="pipeline-step completed">
                   <span>1</span>
-                  <strong>Health Scan</strong>
+                  <strong>
+                    Health Scan
+                  </strong>
                 </div>
 
                 <div className="pipeline-line"></div>
 
                 <div className="pipeline-step completed">
                   <span>2</span>
-                  <strong>SQL Analysis</strong>
+                  <strong>
+                    SQL Analysis
+                  </strong>
                 </div>
 
                 <div className="pipeline-line"></div>
 
                 <div className="pipeline-step active-step">
                   <span>3</span>
-                  <strong>Threat Detection</strong>
+                  <strong>
+                    Threat Detection
+                  </strong>
                 </div>
 
                 <div className="pipeline-line"></div>
 
                 <div className="pipeline-step">
                   <span>4</span>
-                  <strong>AI Recommendation</strong>
+                  <strong>
+                    AI Recommendation
+                  </strong>
                 </div>
 
                 <div className="pipeline-line"></div>
 
                 <div className="pipeline-step">
                   <span>5</span>
-                  <strong>Response Engine</strong>
+                  <strong>
+                    Response Engine
+                  </strong>
                 </div>
+
               </div>
+
             </section>
+
           </section>
         )}
 
         {/* =========================
-          DATABASES
-      ========================= */}
+            DATABASES
+        ========================= */}
 
-      {activePage === "Databases" && <Databases />}
-
-      {/* =========================
-    SCANS
-      ========================= */}
-
-      {activePage === "Scans" && <Scans />}
-
-      {/* =========================
-    THREATS
-========================= */}
-
-{activePage === "Threats" && <Threats />}
-
-      {/* =========================
-          PLACEHOLDER PAGES
-      ========================= */}
-
-      {activePage !== "Dashboard" &&
-        activePage !== "Databases" &&
-        activePage !== "Scans" && (
-    <sction     section className="content">
-            <div className="panel placeholder-panel">
-              <h3>{activePage}</h3>
-              <p>
-                This AegisX module is ready for integration.
-              </p>
-            </div>
-          </sction>
+        {activePage === "Databases" && (
+          <Databases />
         )}
+
+        {/* =========================
+            SCANS
+        ========================= */}
+
+        {activePage === "Scans" && (
+          <Scans />
+        )}
+
+        {/* =========================
+            THREATS
+        ========================= */}
+
+        {activePage === "Threats" && (
+          <Threats />
+        )}
+
+        {/* =========================
+            INCIDENTS
+        ========================= */}
+
+        {activePage === "Incidents" && (
+          <Incidents />
+        )}
+
+        {/* =========================
+            PLACEHOLDER PAGES
+        ========================= */}
+
+        {activePage !== "Dashboard" &&
+          activePage !== "Databases" &&
+          activePage !== "Scans" &&
+          activePage !== "Threats" &&
+          activePage !== "Incidents" && (
+            <section className="content">
+
+              <div className="panel placeholder-panel">
+
+                <h3>{activePage}</h3>
+
+                <p>
+                  This AegisX module is ready for
+                  integration.
+                </p>
+
+              </div>
+
+            </section>
+          )}
+
       </main>
+
     </div>
   );
 }
