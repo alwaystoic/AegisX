@@ -28,6 +28,7 @@ import Threats from "./pages/Threats";
 import Incidents from "./pages/Incidents";
 import AIRecommendations from "./pages/AIRecommendations";
 import SecurityPipeline from "./pages/SecurityPipeline";
+import Scheduler from "./pages/Scheduler";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -687,6 +688,14 @@ function App() {
         )}
 
         {/* =========================
+            SCHEDULER
+        ========================= */}
+
+        {activePage === "Scheduler" && (
+          <Scheduler />
+        )}
+
+        {/* =========================
             PLACEHOLDER PAGES
         ========================= */}
 
@@ -696,7 +705,8 @@ function App() {
           activePage !== "Threats" &&
           activePage !== "Incidents" &&
           activePage !== "AI Recommendations" &&
-          activePage !== "Security Pipeline" && (
+          activePage !== "Security Pipeline" &&
+          activePage !== "Scheduler" && (
             <section className="content">
               <div className="panel placeholder-panel">
                 <h3>{activePage}</h3>
