@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db.postgres import engine
@@ -11,7 +12,6 @@ from app.features.scan.router import router as scan_router
 from app.features.threat.router import router as threat_router
 from app.features.audit.router import router as audit_router
 from app.features.analyzer.router import router as analyzer_router
-
 
 from app.features.threat_detection.router import (
     router as threat_detection_router,
@@ -32,8 +32,17 @@ from app.features.scheduler.router import (
     router as scheduler_router,
 )
 
-# Create all database tables
+
+# ============================================================
+# DATABASE INITIALIZATION
+# ============================================================
+
 Base.metadata.create_all(bind=engine)
+
+
+# ============================================================
+# FASTAPI APPLICATION
+# ============================================================
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -41,7 +50,27 @@ app = FastAPI(
     version=settings.APP_VERSION,
 )
 
-# Register routers
+
+# ============================================================
+# CORS CONFIGURATION
+# ============================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================
+# API ROUTERS
+# ============================================================
+
 app.include_router(users_router)
 app.include_router(databases_router)
 app.include_router(incidents_router)
@@ -49,12 +78,18 @@ app.include_router(scan_router)
 app.include_router(threat_router)
 app.include_router(audit_router)
 app.include_router(analyzer_router)
+
 app.include_router(threat_detection_router)
 app.include_router(ai_router)
 app.include_router(pipeline_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
 app.include_router(scheduler_router)
+
+
+# ============================================================
+# ROOT ENDPOINT
+# ============================================================
 
 @app.get("/")
 def root():
@@ -64,6 +99,10 @@ def root():
         "APP_ENV": settings.APP_ENV,
     }
 
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
 
 @app.get("/health")
 def health():
