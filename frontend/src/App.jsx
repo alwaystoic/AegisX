@@ -27,6 +27,7 @@ import Scans from "./pages/Scans";
 import Threats from "./pages/Threats";
 import Incidents from "./pages/Incidents";
 import AIRecommendations from "./pages/AIRecommendations";
+import SecurityPipeline from "./pages/SecurityPipeline";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -670,32 +671,42 @@ function App() {
         )}
 
         {/* =========================
-    AI RECOMMENDATIONS
-========================= */}
+            AI RECOMMENDATIONS
+        ========================= */}
 
-{activePage === "AI Recommendations" && (
-  <AIRecommendations />
-)}
+        {activePage === "AI Recommendations" && (
+          <AIRecommendations />
+        )}
 
-{/* =========================
-    PLACEHOLDER PAGES
-========================= */}
+        {/* =========================
+            SECURITY PIPELINE
+        ========================= */}
 
-{activePage !== "Dashboard" &&
-  activePage !== "Databases" &&
-  activePage !== "Scans" &&
-  activePage !== "Threats" &&
-  activePage !== "Incidents" &&
-  activePage !== "AI Recommendations" && (
-    <section className="content">
-      <div className="panel placeholder-panel">
-        <h3>{activePage}</h3>
-        <p>
-          This AegisX module is ready for integration.
-        </p>
-      </div>
-    </section>
-  )}
+        {activePage === "Security Pipeline" && (
+          <SecurityPipeline />
+        )}
+
+        {/* =========================
+            PLACEHOLDER PAGES
+        ========================= */}
+
+        {activePage !== "Dashboard" &&
+          activePage !== "Databases" &&
+          activePage !== "Scans" &&
+          activePage !== "Threats" &&
+          activePage !== "Incidents" &&
+          activePage !== "AI Recommendations" &&
+          activePage !== "Security Pipeline" && (
+            <section className="content">
+              <div className="panel placeholder-panel">
+                <h3>{activePage}</h3>
+
+                <p>
+                  This AegisX module is ready for integration.
+                </p>
+              </div>
+            </section>
+          )}
 
       </main>
 
