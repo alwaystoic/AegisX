@@ -1,14 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.features.dashboard.service import (
-    get_dashboard_summary,
-)
+from app.features.dashboard.service import get_dashboard_summary
 
-from app.features.reports.schemas import (
-    ReportResponse,
-)
+from app.features.reports.schemas import ReportResponse
 
 
 def generate_security_report(
@@ -17,9 +13,18 @@ def generate_security_report(
 
     dashboard = get_dashboard_summary(db)
 
-    recommendations = []
+    recommendations: list[str] = []
 
-    if dashboard.system_status == "Healthy":
+    system_status = str(
+        getattr(
+            dashboard,
+            "system_status",
+            "Healthy",
+        )
+    )
+
+    if system_status == "Healthy":
+
         recommendations.extend(
             [
                 "Continue routine monitoring.",
@@ -28,7 +33,8 @@ def generate_security_report(
             ]
         )
 
-    elif dashboard.system_status == "Warning":
+    elif system_status == "Warning":
+
         recommendations.extend(
             [
                 "Investigate unresolved threats.",
@@ -38,6 +44,7 @@ def generate_security_report(
         )
 
     else:
+
         recommendations.extend(
             [
                 "Immediate security review required.",
@@ -47,15 +54,41 @@ def generate_security_report(
         )
 
     return ReportResponse(
-        generated_at=datetime.utcnow(),
-        security_score=dashboard.security_score,
-        system_status=dashboard.system_status,
-        total_users=dashboard.total_users,
-        total_databases=dashboard.total_databases,
-        total_scans=dashboard.total_scans,
-        completed_scans=dashboard.completed_scans,
-        total_threats=dashboard.total_threats,
-        critical_threats=dashboard.critical_threats,
-        total_incidents=dashboard.total_incidents,
+        generated_at=datetime.now(timezone.utc),
+
+        security_score=int(
+            getattr(dashboard, "security_score", 0)
+        ),
+
+        system_status=system_status,
+
+        total_users=int(
+            getattr(dashboard, "total_users", 0)
+        ),
+
+        total_databases=int(
+            getattr(dashboard, "total_databases", 0)
+        ),
+
+        total_scans=int(
+            getattr(dashboard, "total_scans", 0)
+        ),
+
+        completed_scans=int(
+            getattr(dashboard, "completed_scans", 0)
+        ),
+
+        total_threats=int(
+            getattr(dashboard, "total_threats", 0)
+        ),
+
+        critical_threats=int(
+            getattr(dashboard, "critical_threats", 0)
+        ),
+
+        total_incidents=int(
+            getattr(dashboard, "total_incidents", 0)
+        ),
+
         recommendations=recommendations,
     )
