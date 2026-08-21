@@ -1,1290 +1,821 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  GitBranch,
-  Loader2,
-  Play,
-  RefreshCw,
-  RotateCcw,
-  ShieldCheck,
-  Square,
-  Timer,
-  Zap,
-} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 function Scheduler() {
-  const [status, setStatus] = useState({
-    scheduler_running: false,
-    interval_minutes: 1,
-    last_run: null,
-    next_run: null,
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [schedulerStatus, setSchedulerStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const getHeaders = useCallback(() => {
-    const token = localStorage.getItem("access_token");
+  // ============================================================
+  // FETCH SCHEDULER STATUS
+  // ============================================================
 
-    return token
-      ? {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        }
-      : {
-          "Content-Type": "application/json",
-        };
-  }, []);
-
-  const fetchStatus = useCallback(async (showLoader = true) => {
+  const fetchStatus = useCallback(async (showLoader = false) => {
     if (showLoader) {
-      setLoading(true);
+      setRefreshing(true);
     }
 
-    setError("");
-
     try {
-      const response = await fetch(
-        `${API_URL}/scheduler/status`,
-        {
-          method: "GET",
-          headers: getHeaders(),
-        }
-      );
+      setError("");
 
-      const data = await response.json().catch(() => ({}));
+      const response = await fetch(`${API_URL}/scheduler/status`);
 
       if (!response.ok) {
         throw new Error(
-          data?.detail || "Failed to fetch scheduler status."
+          `Scheduler status request failed (${response.status})`
         );
       }
 
-      setStatus({
-        scheduler_running: Boolean(data.scheduler_running),
-        interval_minutes: Number(data.interval_minutes ?? 1),
-        last_run: data.last_run ?? null,
-        next_run: data.next_run ?? null,
-      });
+      const data = await response.json();
+
+      setSchedulerStatus(data);
     } catch (err) {
       console.error("Scheduler status error:", err);
 
       setError(
-        err?.message ||
-          "Unable to connect to the AegisX backend."
+        err.message || "Unable to connect to the scheduler service."
       );
     } finally {
       if (showLoader) {
-        setLoading(false);
+        setRefreshing(false);
       }
     }
-  }, [getHeaders]);
+  }, []);
+
+  // ============================================================
+  // INITIAL LOAD
+  // ============================================================
 
   useEffect(() => {
-    let cancelled = false;
+    /*
+      Delay the initial request by one event-loop cycle.
 
-    const loadStatus = async () => {
-      if (cancelled) {
-        return;
-      }
+      This prevents React's:
+      "Calling setState synchronously within an effect..."
+      warning caused by fetchStatus() updating state immediately.
+    */
 
-      await fetchStatus(true);
-    };
+    const initialLoad = setTimeout(() => {
+      fetchStatus(false);
+    }, 0);
 
-    loadStatus();
-
-    const interval = window.setInterval(() => {
-      if (!cancelled) {
-        fetchStatus(false);
-      }
+    const interval = setInterval(() => {
+      fetchStatus(false);
     }, 10000);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      clearTimeout(initialLoad);
+      clearInterval(interval);
     };
   }, [fetchStatus]);
 
-  const handleSchedulerAction = async (action) => {
-    setActionLoading(true);
-    setError("");
+  // ============================================================
+  // START SCHEDULER
+  // ============================================================
 
+  const startScheduler = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/scheduler/${action}`,
-        {
-          method: "POST",
-          headers: getHeaders(),
-        }
-      );
+      setLoading(true);
+      setMessage("");
+      setError("");
+
+      const response = await fetch(`${API_URL}/scheduler/start`, {
+        method: "POST",
+      });
 
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          data?.detail ||
-            `Unable to ${action} the scheduler.`
+          data.detail ||
+            data.message ||
+            `Unable to start scheduler (${response.status})`
         );
       }
 
-      setStatus({
-        scheduler_running: Boolean(
-          data.scheduler_running
-        ),
-        interval_minutes: Number(
-          data.interval_minutes ?? 1
-        ),
-        last_run: data.last_run ?? null,
-        next_run: data.next_run ?? null,
-      });
-    } catch (err) {
-      console.error(
-        `Scheduler ${action} error:`,
-        err
+      setMessage(
+        data.message || "Security scheduler started successfully."
       );
 
+      await fetchStatus(false);
+    } catch (err) {
+      console.error("Start scheduler error:", err);
+
       setError(
-        err?.message ||
-          "Unable to connect to the AegisX backend."
+        err.message || "Unable to start the scheduler."
       );
     } finally {
-      setActionLoading(false);
+      setLoading(false);
     }
   };
 
-  const formatDateTime = useCallback((value) => {
-    if (!value) {
+  // ============================================================
+  // STOP SCHEDULER
+  // ============================================================
+
+  const stopScheduler = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+      setError("");
+
+      const response = await fetch(`${API_URL}/scheduler/stop`, {
+        method: "POST",
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+            data.message ||
+            `Unable to stop scheduler (${response.status})`
+        );
+      }
+
+      setMessage(
+        data.message || "Security scheduler stopped successfully."
+      );
+
+      await fetchStatus(false);
+    } catch (err) {
+      console.error("Stop scheduler error:", err);
+
+      setError(
+        err.message || "Unable to stop the scheduler."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================================
+  // DATE FORMATTER
+  // ============================================================
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) {
       return "Not available";
     }
 
-    const date = new Date(value);
+    const date = new Date(dateValue);
 
     if (Number.isNaN(date.getTime())) {
-      return String(value);
+      return "Not available";
     }
 
     return date.toLocaleString();
-  }, []);
+  };
 
-  const getRelativeTime = useCallback(
-    (value) => {
-      if (!value) {
-        return "Not available";
-      }
+  // ============================================================
+  // STATUS
+  // ============================================================
 
-      const date = new Date(value);
-
-      if (Number.isNaN(date.getTime())) {
-        return "Not available";
-      }
-
-      const difference = date.getTime() - Date.now();
-
-      if (difference <= 0) {
-        return "Due now";
-      }
-
-      const seconds = Math.floor(
-        difference / 1000
-      );
-
-      if (seconds < 60) {
-        return `${seconds}s`;
-      }
-
-      const minutes = Math.floor(
-        seconds / 60
-      );
-
-      if (minutes < 60) {
-        return `${minutes}m`;
-      }
-
-      const hours = Math.floor(
-        minutes / 60
-      );
-
-      return `${hours}h ${minutes % 60}m`;
-    },
-    []
+  const isRunning = Boolean(
+    schedulerStatus?.scheduler_running
   );
 
-  const schedulerLabel = useMemo(() => {
-    return status.scheduler_running
-      ? "Scheduler Running"
-      : "Scheduler Stopped";
-  }, [status.scheduler_running]);
+  const intervalMinutes =
+    schedulerStatus?.interval_minutes ?? 1;
 
-  const cardStyle = {
-    background: "#0d1522",
-    border: "1px solid #1d2b3f",
-    borderRadius: "8px",
-  };
-
-  const iconBoxStyle = {
-    width: "34px",
-    height: "34px",
-    borderRadius: "7px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#10213b",
-    border: "1px solid #1b3b68",
-    color: "#3b82f6",
-    flexShrink: 0,
-  };
-
-  const statValueStyle = {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#f8fafc",
-    lineHeight: 1.2,
-  };
-
-  const mutedStyle = {
-    color: "#64748b",
-    fontSize: "10px",
-  };
+  // ============================================================
+  // UI
+  // ============================================================
 
   return (
-    <section
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        padding: "24px 28px 36px",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* ==========================================
-          HEADER
-      ========================================== */}
+    <div className="scheduler-page">
+      {/* ======================================================
+          PAGE HEADER
+      ====================================================== */}
 
       <div
+        className="scheduler-header"
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
+          alignItems: "flex-start",
           gap: "20px",
-          marginBottom: "20px",
+          marginBottom: "28px",
         }}
       >
         <div>
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "5px",
+              fontSize: "12px",
+              color: "#64748b",
+              marginBottom: "6px",
+              letterSpacing: "0.4px",
             }}
           >
-            <div style={iconBoxStyle}>
-              <Clock3 size={18} />
-            </div>
-
-            <div>
-              <h3
-                style={{
-                  margin: 0,
-                  color: "#f8fafc",
-                  fontSize: "18px",
-                  fontWeight: 700,
-                }}
-              >
-                Security Scheduler
-              </h3>
-
-              <p
-                style={{
-                  margin: "3px 0 0",
-                  color: "#64748b",
-                  fontSize: "10px",
-                }}
-              >
-                Manage automated AegisX security
-                pipeline execution.
-              </p>
-            </div>
+            SECURITY OPERATIONS
           </div>
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "28px",
+              fontWeight: 700,
+              color: "#f8fafc",
+            }}
+          >
+            Security Scheduler
+          </h1>
+
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "#94a3b8",
+              fontSize: "14px",
+            }}
+          >
+            Manage the automated AegisX security pipeline.
+          </p>
         </div>
+
+        {/* STATUS BADGE */}
 
         <div
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "12px",
+            gap: "8px",
+            padding: "8px 14px",
+            borderRadius: "8px",
+            border: `1px solid ${
+              isRunning ? "#14532d" : "#334155"
+            }`,
+            background: isRunning
+              ? "rgba(34, 197, 94, 0.08)"
+              : "rgba(100, 116, 139, 0.08)",
+            color: isRunning ? "#4ade80" : "#94a3b8",
+            fontSize: "12px",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
           }}
         >
-          <div
+          <span
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "7px",
-              padding: "6px 10px",
-              borderRadius: "5px",
-              border: `1px solid ${
-                status.scheduler_running
-                  ? "#14532d"
-                  : "#164e63"
-              }`,
-              background: status.scheduler_running
-                ? "rgba(16,185,129,0.07)"
-                : "rgba(14,165,233,0.06)",
-              color: status.scheduler_running
-                ? "#34d399"
-                : "#38bdf8",
-              fontSize: "10px",
-              fontWeight: 600,
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: isRunning
+                ? "#22c55e"
+                : "#64748b",
+              boxShadow: isRunning
+                ? "0 0 8px rgba(34,197,94,0.7)"
+                : "none",
             }}
-          >
-            <span
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "currentColor",
-                boxShadow:
-                  "0 0 6px currentColor",
-              }}
-            />
+          />
 
-            {schedulerLabel}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => fetchStatus(true)}
-            disabled={loading}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "7px 11px",
-              borderRadius: "5px",
-              border: "1px solid #26364d",
-              background: "#101a29",
-              color: "#cbd5e1",
-              cursor: loading
-                ? "not-allowed"
-                : "pointer",
-              fontSize: "10px",
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            <RefreshCw
-              size={13}
-              style={{
-                animation: loading
-                  ? "scheduler-spin 1s linear infinite"
-                  : "none",
-              }}
-            />
-            Refresh
-          </button>
+          {isRunning ? "Running" : "Stopped"}
         </div>
       </div>
 
-      {/* ==========================================
-          ERROR
-      ========================================== */}
+      {/* ======================================================
+          MESSAGES
+      ====================================================== */}
+
+      {message && (
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            border: "1px solid rgba(34, 197, 94, 0.25)",
+            background: "rgba(34, 197, 94, 0.07)",
+            color: "#4ade80",
+            fontSize: "13px",
+          }}
+        >
+          ✓ {message}
+        </div>
+      )}
 
       {error && (
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "9px",
-            padding: "10px 12px",
-            marginBottom: "16px",
-            borderRadius: "6px",
-            border: "1px solid #5f2028",
-            background: "rgba(127,29,29,0.12)",
-            color: "#fca5a5",
-            fontSize: "11px",
+            marginBottom: "20px",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            background: "rgba(239, 68, 68, 0.07)",
+            color: "#f87171",
+            fontSize: "13px",
           }}
         >
-          <AlertTriangle size={15} />
-          <span>{error}</span>
+          ⚠ {error}
         </div>
       )}
 
-      {/* ==========================================
-          MAIN CONTROL CARD
-      ========================================== */}
+      {/* ======================================================
+          MAIN GRID
+      ====================================================== */}
 
       <div
         style={{
-          ...cardStyle,
-          padding: "18px",
-          marginBottom: "14px",
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: "16px",
+          marginBottom: "20px",
+        }}
+      >
+        {/* SCHEDULER STATUS */}
+
+        <div className="scheduler-card">
+          <div className="scheduler-card-icon">⚙</div>
+
+          <div className="scheduler-card-label">
+            SCHEDULER STATUS
+          </div>
+
+          <div
+            className="scheduler-card-value"
+            style={{
+              color: isRunning ? "#4ade80" : "#94a3b8",
+            }}
+          >
+            {isRunning ? "Running" : "Stopped"}
+          </div>
+
+          <div className="scheduler-card-description">
+            The automated security pipeline is currently{" "}
+            <strong>
+              {isRunning ? "running" : "stopped"}
+            </strong>
+            .
+          </div>
+        </div>
+
+        {/* EXECUTION INTERVAL */}
+
+        <div className="scheduler-card">
+          <div className="scheduler-card-icon">⏱</div>
+
+          <div className="scheduler-card-label">
+            EXECUTION INTERVAL
+          </div>
+
+          <div className="scheduler-card-value">
+            Every {intervalMinutes} minute
+            {intervalMinutes !== 1 ? "s" : ""}
+          </div>
+
+          <div className="scheduler-card-description">
+            The security pipeline executes automatically at
+            this interval.
+          </div>
+        </div>
+
+        {/* LAST RUN */}
+
+        <div className="scheduler-card">
+          <div className="scheduler-card-icon">▶</div>
+
+          <div className="scheduler-card-label">
+            LAST RUN
+          </div>
+
+          <div className="scheduler-card-value small">
+            {formatDate(schedulerStatus?.last_run)}
+          </div>
+
+          <div className="scheduler-card-description">
+            Most recent automated pipeline execution.
+          </div>
+        </div>
+
+        {/* NEXT RUN */}
+
+        <div className="scheduler-card">
+          <div className="scheduler-card-icon">⏭</div>
+
+          <div className="scheduler-card-label">
+            NEXT RUN
+          </div>
+
+          <div className="scheduler-card-value small">
+            {formatDate(schedulerStatus?.next_run)}
+          </div>
+
+          <div className="scheduler-card-description">
+            Next scheduled security pipeline execution.
+          </div>
+        </div>
+      </div>
+
+      {/* ======================================================
+          SCHEDULER CONTROLS
+      ====================================================== */}
+
+      <div
+        className="scheduler-section-card"
+        style={{
+          marginBottom: "20px",
         }}
       >
         <div
           style={{
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "center",
             gap: "20px",
-            marginBottom: "16px",
+            flexWrap: "wrap",
           }}
         >
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "#f8fafc",
-                fontSize: "13px",
-                fontWeight: 650,
-              }}
-            >
-              <Zap size={15} color="#3b82f6" />
-              Scheduler Control
-            </div>
+            <h2 className="scheduler-section-title">
+              Scheduler Controls
+            </h2>
 
-            <p
-              style={{
-                margin: "4px 0 0",
-                color: "#64748b",
-                fontSize: "10px",
-              }}
-            >
-              Start or stop automated security
-              pipeline execution.
+            <p className="scheduler-section-description">
+              Start or stop the automated security pipeline.
             </p>
           </div>
 
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              gap: "7px",
-              padding: "5px 9px",
-              borderRadius: "5px",
-              background: status.scheduler_running
-                ? "rgba(16,185,129,0.08)"
-                : "rgba(100,116,139,0.08)",
-              color: status.scheduler_running
-                ? "#34d399"
-                : "#94a3b8",
-              fontSize: "9px",
-              fontWeight: 600,
+              gap: "10px",
+              flexWrap: "wrap",
             }}
           >
-            <Activity size={12} />
+            <button
+              type="button"
+              onClick={startScheduler}
+              disabled={isRunning || loading}
+              className="scheduler-button scheduler-button-primary"
+            >
+              {loading && !isRunning
+                ? "Starting..."
+                : "▶ Start Scheduler"}
+            </button>
 
-            {status.scheduler_running
-              ? "ACTIVE"
-              : "INACTIVE"}
+            <button
+              type="button"
+              onClick={stopScheduler}
+              disabled={!isRunning || loading}
+              className="scheduler-button scheduler-button-danger"
+            >
+              {loading && isRunning
+                ? "Stopping..."
+                : "■ Stop Scheduler"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fetchStatus(true)}
+              disabled={refreshing}
+              className="scheduler-button scheduler-button-secondary"
+            >
+              {refreshing
+                ? "Refreshing..."
+                : "↻ Refresh Status"}
+            </button>
           </div>
         </div>
+      </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "minmax(0, 1fr) auto",
-            gap: "18px",
-            alignItems: "center",
-          }}
-        >
+      {/* ======================================================
+          HOW IT WORKS
+      ====================================================== */}
+
+      <div className="scheduler-section-card">
+        <div className="scheduler-section-heading">
+          <div className="scheduler-heading-icon">
+            ℹ
+          </div>
+
           <div>
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: "9px",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "5px",
-              }}
-            >
-              Current Status
-            </div>
+            <h2 className="scheduler-section-title">
+              How It Works
+            </h2>
 
-            <div
-              style={{
-                color: status.scheduler_running
-                  ? "#34d399"
-                  : "#e2e8f0",
-                fontSize: "18px",
-                fontWeight: 700,
-                marginBottom: "3px",
-              }}
-            >
-              {status.scheduler_running
-                ? "Running"
-                : "Stopped"}
-            </div>
-
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: "10px",
-              }}
-            >
-              {status.scheduler_running
-                ? "The automated security pipeline is running."
-                : "The automated security pipeline is currently stopped."}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() =>
-                handleSchedulerAction("start")
-              }
-              disabled={
-                status.scheduler_running ||
-                actionLoading
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                minWidth: "112px",
-                padding: "9px 13px",
-                borderRadius: "5px",
-                border: "1px solid #2563eb",
-                background:
-                  status.scheduler_running
-                    ? "#162033"
-                    : "#2563eb",
-                color: status.scheduler_running
-                  ? "#475569"
-                  : "#ffffff",
-                cursor:
-                  status.scheduler_running ||
-                  actionLoading
-                    ? "not-allowed"
-                    : "pointer",
-                fontSize: "10px",
-                fontWeight: 600,
-              }}
-            >
-              {actionLoading ? (
-                <Loader2
-                  size={13}
-                  style={{
-                    animation:
-                      "scheduler-spin 1s linear infinite",
-                  }}
-                />
-              ) : (
-                <Play size={13} />
-              )}
-
-              Start Scheduler
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                handleSchedulerAction("stop")
-              }
-              disabled={
-                !status.scheduler_running ||
-                actionLoading
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                minWidth: "112px",
-                padding: "9px 13px",
-                borderRadius: "5px",
-                border: "1px solid #334155",
-                background:
-                  !status.scheduler_running
-                    ? "#101725"
-                    : "#17202d",
-                color:
-                  !status.scheduler_running
-                    ? "#475569"
-                    : "#cbd5e1",
-                cursor:
-                  !status.scheduler_running ||
-                  actionLoading
-                    ? "not-allowed"
-                    : "pointer",
-                fontSize: "10px",
-                fontWeight: 600,
-              }}
-            >
-              <Square size={12} />
-
-              Stop Scheduler
-            </button>
+            <p className="scheduler-section-description">
+              AegisX continuously automates the security
+              analysis workflow.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* ==========================================
-          STAT CARDS
-      ========================================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(4, minmax(0, 1fr))",
-          gap: "10px",
-          marginBottom: "14px",
-        }}
-      >
-        {/* Status */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "13px",
-            minHeight: "78px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-            }}
-          >
-            <div style={iconBoxStyle}>
-              <Activity size={16} />
+        <div className="scheduler-steps">
+          <div className="scheduler-step">
+            <div className="scheduler-step-number">
+              1
             </div>
 
             <div>
-              <div style={mutedStyle}>
-                Scheduler Status
+              <div className="scheduler-step-title">
+                Background Process
               </div>
 
-              <div
-                style={{
-                  ...statValueStyle,
-                  fontSize: "16px",
-                  color: status.scheduler_running
-                    ? "#34d399"
-                    : "#94a3b8",
-                }}
-              >
-                {status.scheduler_running
-                  ? "Active"
-                  : "Inactive"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Interval */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "13px",
-            minHeight: "78px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-            }}
-          >
-            <div style={iconBoxStyle}>
-              <Timer size={16} />
-            </div>
-
-            <div>
-              <div style={mutedStyle}>
-                Execution Interval
-              </div>
-
-              <div style={statValueStyle}>
-                {status.interval_minutes}
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 400,
-                    color: "#64748b",
-                    marginLeft: "4px",
-                  }}
-                >
-                  min
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Run */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "13px",
-            minHeight: "78px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-            }}
-          >
-            <div style={iconBoxStyle}>
-              <RotateCcw size={16} />
-            </div>
-
-            <div
-              style={{
-                minWidth: 0,
-              }}
-            >
-              <div style={mutedStyle}>
-                Last Run
-              </div>
-
-              <div
-                style={{
-                  color: "#f8fafc",
-                  fontSize: "12px",
-                  fontWeight: 650,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-                title={formatDateTime(
-                  status.last_run
-                )}
-              >
-                {status.last_run
-                  ? formatDateTime(
-                      status.last_run
-                    )
-                  : "Not available"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Next Run */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "13px",
-            minHeight: "78px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-            }}
-          >
-            <div style={iconBoxStyle}>
-              <Clock3 size={16} />
-            </div>
-
-            <div
-              style={{
-                minWidth: 0,
-              }}
-            >
-              <div style={mutedStyle}>
-                Next Run
-              </div>
-
-              <div
-                style={{
-                  color: "#f8fafc",
-                  fontSize: "12px",
-                  fontWeight: 650,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-                title={formatDateTime(
-                  status.next_run
-                )}
-              >
-                {status.next_run
-                  ? formatDateTime(
-                      status.next_run
-                    )
-                  : "Not available"}
-              </div>
-
-              {status.next_run && (
-                <div
-                  style={{
-                    marginTop: "2px",
-                    color: "#38bdf8",
-                    fontSize: "9px",
-                  }}
-                >
-                  In {getRelativeTime(
-                    status.next_run
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ==========================================
-          SCHEDULE + PIPELINE
-      ========================================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "minmax(230px, 0.8fr) minmax(0, 2fr)",
-          gap: "12px",
-          marginBottom: "14px",
-        }}
-      >
-        {/* Schedule Information */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "13px",
-            }}
-          >
-            <div style={iconBoxStyle}>
-              <Clock3 size={15} />
-            </div>
-
-            <div>
-              <h4
-                style={{
-                  margin: 0,
-                  color: "#f8fafc",
-                  fontSize: "12px",
-                  fontWeight: 650,
-                }}
-              >
-                Schedule Information
-              </h4>
-
-              <p
-                style={{
-                  margin: "3px 0 0",
-                  color: "#64748b",
-                  fontSize: "9px",
-                }}
-              >
-                Current automated pipeline schedule.
+              <p>
+                The scheduler starts an APScheduler
+                background process.
               </p>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gap: "9px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingBottom: "8px",
-                borderBottom:
-                  "1px solid #172235",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "9px",
-                }}
-              >
-                Interval
-              </span>
-
-              <strong
-                style={{
-                  color: "#e2e8f0",
-                  fontSize: "10px",
-                }}
-              >
-                Every {status.interval_minutes} minute
-                {status.interval_minutes !== 1
-                  ? "s"
-                  : ""}
-              </strong>
+          <div className="scheduler-step">
+            <div className="scheduler-step-number">
+              2
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingBottom: "8px",
-                borderBottom:
-                  "1px solid #172235",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "9px",
-                }}
-              >
-                Last Pipeline Run
-              </span>
-
-              <strong
-                style={{
-                  color: "#e2e8f0",
-                  fontSize: "10px",
-                }}
-              >
-                {status.last_run
-                  ? formatDateTime(
-                      status.last_run
-                    )
-                  : "Not available"}
-              </strong>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "9px",
-                }}
-              >
-                Next Pipeline Run
-              </span>
-
-              <strong
-                style={{
-                  color: status.next_run
-                    ? "#38bdf8"
-                    : "#e2e8f0",
-                  fontSize: "10px",
-                }}
-              >
-                {status.next_run
-                  ? getRelativeTime(
-                      status.next_run
-                    )
-                  : "Not available"}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Automated Pipeline */}
-
-        <div
-          style={{
-            ...cardStyle,
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "15px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <div style={iconBoxStyle}>
-                <GitBranch size={15} />
+            <div>
+              <div className="scheduler-step-title">
+                Automated Execution
               </div>
 
-              <div>
-                <h4
-                  style={{
-                    margin: 0,
-                    color: "#f8fafc",
-                    fontSize: "12px",
-                    fontWeight: 650,
-                  }}
-                >
-                  Automated Security Pipeline
-                </h4>
-
-                <p
-                  style={{
-                    margin: "3px 0 0",
-                    color: "#64748b",
-                    fontSize: "9px",
-                  }}
-                >
-                  Complete AegisX security workflow.
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                color: "#34d399",
-                fontSize: "9px",
-                fontWeight: 600,
-              }}
-            >
-              <span
-                style={{
-                  width: "5px",
-                  height: "5px",
-                  borderRadius: "50%",
-                  background: "#34d399",
-                  boxShadow:
-                    "0 0 6px #34d399",
-                }}
-              />
-
-              Automated
+              <p>
+                The security pipeline runs automatically
+                at the configured interval.
+              </p>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              width: "100%",
-            }}
-          >
-            {[
-              {
-                number: 1,
-                label: "Health Scan",
-                icon: ShieldCheck,
-              },
-              {
-                number: 2,
-                label: "SQL Analysis",
-                icon: SearchIcon,
-              },
-              {
-                number: 3,
-                label: "Threat Detection",
-                icon: AlertTriangle,
-              },
-              {
-                number: 4,
-                label: "AI Recommendation",
-                icon: Zap,
-              },
-              {
-                number: 5,
-                label: "Response Engine",
-                icon: GitBranch,
-              },
-            ].map((step, index, array) => {
-              const StepIcon = step.icon;
+          <div className="scheduler-step">
+            <div className="scheduler-step-number">
+              3
+            </div>
 
-              return (
-                <div
-                  key={step.number}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    flex: 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      minWidth: "75px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "27px",
-                        height: "27px",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        border:
-                          "1px solid #14532d",
-                        background:
-                          "rgba(16,185,129,0.08)",
-                        color: "#34d399",
-                        position: "relative",
-                      }}
-                    >
-                      <StepIcon
-                        size={12}
-                      />
-                    </div>
+            <div>
+              <div className="scheduler-step-title">
+                Execution Tracking
+              </div>
 
-                    <span
-                      style={{
-                        marginTop: "6px",
-                        color: "#94a3b8",
-                        fontSize: "8px",
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
+              <p>
+                AegisX records the last and next scheduled
+                execution times.
+              </p>
+            </div>
+          </div>
 
-                  {index <
-                    array.length - 1 && (
-                    <div
-                      style={{
-                        height: "1px",
-                        background:
-                          "#26364d",
-                        flex: 1,
-                        marginTop: "13px",
-                      }}
-                    />
-                  )}
-                </div>
-              );
-            })}
+          <div className="scheduler-step">
+            <div className="scheduler-step-number">
+              4
+            </div>
+
+            <div>
+              <div className="scheduler-step-title">
+                Manual Control
+              </div>
+
+              <p>
+                You can stop or restart the scheduler at
+                any time from this dashboard.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ==========================================
-          STATUS FOOTER
-      ========================================== */}
+      {/* ======================================================
+          INLINE STYLES
+      ====================================================== */}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "9px 12px",
-          borderRadius: "6px",
-          border: "1px solid #17263a",
-          background: "rgba(13,21,34,0.65)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "7px",
-            color: "#64748b",
-            fontSize: "9px",
-          }}
-        >
-          <CheckCircle2
-            size={13}
-            color={
-              status.scheduler_running
-                ? "#34d399"
-                : "#64748b"
-            }
-          />
+      <style>{`
+        .scheduler-page {
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 30px 34px 50px;
+          box-sizing: border-box;
+          color: #f8fafc;
+        }
 
-          AegisX scheduler service
-        </div>
+        .scheduler-card {
+          min-height: 165px;
+          padding: 20px;
+          border-radius: 10px;
+          border: 1px solid #1e293b;
+          background: #0b111c;
+          box-sizing: border-box;
+          transition:
+            border-color 0.2s ease,
+            transform 0.2s ease;
+        }
 
-        <span
-          style={{
-            color: status.scheduler_running
-              ? "#34d399"
-              : "#64748b",
-            fontSize: "9px",
-            fontWeight: 600,
-          }}
-        >
-          {status.scheduler_running
-            ? "Ready for automated execution"
-            : "Waiting for scheduler start"}
-        </span>
-      </div>
+        .scheduler-card:hover {
+          border-color: #334155;
+          transform: translateY(-1px);
+        }
 
-      <style>
-        {`
-          @keyframes scheduler-spin {
-            from {
-              transform: rotate(0deg);
-            }
-            to {
-              transform: rotate(360deg);
-            }
+        .scheduler-card-icon {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 7px;
+          margin-bottom: 16px;
+          background: rgba(59, 130, 246, 0.08);
+          border: 1px solid rgba(59, 130, 246, 0.18);
+          color: #60a5fa;
+          font-size: 14px;
+        }
+
+        .scheduler-card-label {
+          color: #64748b;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.8px;
+          margin-bottom: 8px;
+        }
+
+        .scheduler-card-value {
+          color: #f8fafc;
+          font-size: 19px;
+          font-weight: 650;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+
+        .scheduler-card-value.small {
+          font-size: 14px;
+        }
+
+        .scheduler-card-description {
+          margin-top: 9px;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .scheduler-section-card {
+          padding: 22px;
+          border-radius: 10px;
+          border: 1px solid #1e293b;
+          background: #0b111c;
+          box-sizing: border-box;
+        }
+
+        .scheduler-section-title {
+          margin: 0;
+          color: #f8fafc;
+          font-size: 17px;
+          font-weight: 650;
+        }
+
+        .scheduler-section-description {
+          margin: 6px 0 0;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .scheduler-button {
+          border: 1px solid transparent;
+          border-radius: 6px;
+          padding: 9px 13px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition:
+            background 0.2s ease,
+            border-color 0.2s ease,
+            opacity 0.2s ease;
+        }
+
+        .scheduler-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.45;
+        }
+
+        .scheduler-button-primary {
+          background: #2563eb;
+          border-color: #2563eb;
+          color: white;
+        }
+
+        .scheduler-button-primary:hover:not(:disabled) {
+          background: #1d4ed8;
+          border-color: #1d4ed8;
+        }
+
+        .scheduler-button-danger {
+          background: rgba(239, 68, 68, 0.08);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #f87171;
+        }
+
+        .scheduler-button-danger:hover:not(:disabled) {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.45);
+        }
+
+        .scheduler-button-secondary {
+          background: #111827;
+          border-color: #334155;
+          color: #cbd5e1;
+        }
+
+        .scheduler-button-secondary:hover:not(:disabled) {
+          background: #172033;
+          border-color: #475569;
+        }
+
+        .scheduler-section-heading {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 22px;
+        }
+
+        .scheduler-heading-icon {
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 7px;
+          background: rgba(59, 130, 246, 0.08);
+          border: 1px solid rgba(59, 130, 246, 0.18);
+          color: #60a5fa;
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .scheduler-steps {
+          display: grid;
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .scheduler-step {
+          display: flex;
+          gap: 13px;
+          padding: 16px;
+          border-radius: 8px;
+          background: rgba(15, 23, 42, 0.55);
+          border: 1px solid #172033;
+        }
+
+        .scheduler-step-number {
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          background: rgba(59, 130, 246, 0.1);
+          color: #60a5fa;
+          font-size: 12px;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+
+        .scheduler-step-title {
+          color: #e2e8f0;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 5px;
+        }
+
+        .scheduler-step p {
+          margin: 0;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        @media (max-width: 800px) {
+          .scheduler-page {
+            padding: 24px 20px 40px;
           }
 
-          @media (max-width: 1100px) {
-            .scheduler-page {
-              padding-left: 18px;
-              padding-right: 18px;
-            }
+          .scheduler-header {
+            flex-direction: column !important;
           }
-        `}
-      </style>
-    </section>
-  );
-}
 
-/*
- * Small local icon component so the scheduler
- * remains self-contained.
- */
-function SearchIcon({ size = 16 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
+          .scheduler-steps {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 550px) {
+          .scheduler-page {
+            padding: 20px 14px 35px;
+          }
+
+          .scheduler-card {
+            min-height: auto;
+          }
+
+          .scheduler-section-card {
+            padding: 16px;
+          }
+
+          .scheduler-button {
+            width: 100%;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
 

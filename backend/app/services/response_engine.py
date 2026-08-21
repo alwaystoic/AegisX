@@ -1,10 +1,13 @@
 from typing import Dict
+
 from sqlalchemy.orm import Session
 
 from app.features.incidents.service import create_incident
 from app.features.incidents.schemas import IncidentCreate
+
 from app.features.audit.service import create_audit_log
 from app.features.audit.schemas import AuditLogCreate
+
 
 def determine_actions(
     db: Session,
@@ -22,6 +25,10 @@ def determine_actions(
     risk = threat["overall_risk"]
 
     incident = None
+
+    # ============================================================
+    # CRITICAL RISK
+    # ============================================================
 
     if risk == "Critical":
 
@@ -42,7 +49,10 @@ def determine_actions(
                 username="system",
                 action="Automatic Incident Creation",
                 resource="Security Pipeline",
-                details="Critical threat detected. Incident created automatically.",
+                details=(
+                    "Critical threat detected. "
+                    "Incident created automatically."
+                ),
             ),
         )
 
@@ -53,6 +63,10 @@ def determine_actions(
                 "send_notification",
             ]
         )
+
+    # ============================================================
+    # HIGH RISK
+    # ============================================================
 
     elif risk == "High":
 
@@ -68,14 +82,17 @@ def determine_actions(
         )
 
         create_audit_log(
-    db,
-    AuditLogCreate(
-        username="system",
-        action="Automatic Incident Creation",
-        resource="Security Pipeline",
-        details="High-risk threat detected. Incident created automatically.",
-    ),
-)
+            db,
+            AuditLogCreate(
+                username="system",
+                action="Automatic Incident Creation",
+                resource="Security Pipeline",
+                details=(
+                    "High-risk threat detected. "
+                    "Incident created automatically."
+                ),
+            ),
+        )
 
         actions.extend(
             [
@@ -83,6 +100,10 @@ def determine_actions(
                 "write_audit_log",
             ]
         )
+
+    # ============================================================
+    # MEDIUM RISK
+    # ============================================================
 
     elif risk == "Medium":
 
@@ -96,9 +117,29 @@ def determine_actions(
             ),
         )
 
-    actions.append(
-    "write_audit_log"
-    )
+        actions.append("write_audit_log")
+
+    # ============================================================
+    # LOW RISK
+    # ============================================================
+
+    elif risk == "Low":
+
+        create_audit_log(
+            db,
+            AuditLogCreate(
+                username="system",
+                action="Security Scan",
+                resource="Security Pipeline",
+                details="Low-risk security scan completed successfully.",
+            ),
+        )
+
+        actions.append("write_audit_log")
+
+    # ============================================================
+    # RETURN RESPONSE
+    # ============================================================
 
     return {
         "overall_risk": risk,
