@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
-
 import {
   LayoutDashboard,
   Database,
@@ -39,6 +38,10 @@ function App() {
   );
 
   const [activePage, setActivePage] = useState("Dashboard");
+  const [securityReport, setSecurityReport] = useState(null);
+  const [dashboardSummary, setDashboardSummary] = useState(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportError, setReportError] = useState("");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -120,6 +123,67 @@ function App() {
       setLoggingIn(false);
     }
   };
+
+  useEffect(() => {
+  if (!isAuthenticated) {
+    return;
+  }
+
+  const loadSecurityReport = async () => {
+    try {
+      setReportLoading(true);
+      setReportError("");
+
+      const token = localStorage.getItem("access_token");
+      const headers = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+
+      // The dashboard endpoint is the source of truth for the
+      // dashboard security score. The reports endpoint is kept as
+      // a fallback and for report-specific fields.
+      const [dashboardResponse, reportResponse] = await Promise.all([
+        fetch(`${API_URL}/dashboard/summary`, { headers }),
+        fetch(`${API_URL}/reports/security`, { headers }),
+      ]);
+
+      const dashboardData = await dashboardResponse
+        .json()
+        .catch(() => ({}));
+      const reportData = await reportResponse
+        .json()
+        .catch(() => ({}));
+
+      if (!dashboardResponse.ok && !reportResponse.ok) {
+        throw new Error(
+          dashboardData?.detail ||
+            reportData?.detail ||
+            "Unable to load dashboard security data."
+        );
+      }
+
+      if (dashboardResponse.ok) {
+        setDashboardSummary(dashboardData);
+      }
+
+      if (reportResponse.ok) {
+        setSecurityReport(reportData);
+      }
+
+      // Keep the dashboard usable even if only one endpoint succeeds.
+      if (!dashboardResponse.ok && reportResponse.ok) {
+        setDashboardSummary(reportData);
+      }
+    } catch (error) {
+      console.error("Security report error:", error);
+      setReportError("Unable to load security report.");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  loadSecurityReport();
+}, [isAuthenticated]);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -373,6 +437,12 @@ function App() {
 
         {activePage === "Dashboard" && (
           <section className="content">
+            {reportError && (
+  <div className="login-error">
+    <AlertTriangle size={17} />
+    <span>{reportError}</span>
+  </div>
+)}
 
             <div className="welcome">
               <div>
@@ -403,11 +473,19 @@ function App() {
 
                 <div>
                   <span>Security Score</span>
-                  <strong>85</strong>
+                  <strong>
+                    {reportLoading
+                      ? "..."
+                      : dashboardSummary?.security_score ?? securityReport?.security_score ?? 0}
+                  </strong>
                 </div>
 
                 <small>
-                  Good security posture
+                  {(dashboardSummary?.system_status ?? securityReport?.system_status) === "Critical"
+                    ? "Critical security posture"
+                    : (dashboardSummary?.system_status ?? securityReport?.system_status) === "Warning"
+                    ? "Security attention required"
+                    : "Good security posture"}
                 </small>
               </div>
 
@@ -418,7 +496,11 @@ function App() {
 
                 <div>
                   <span>Total Users</span>
-                  <strong>12</strong>
+                  <strong>
+  {reportLoading
+    ? "..."
+    : dashboardSummary?.total_users ?? securityReport?.total_users ?? 0}
+</strong>
                 </div>
 
                 <small>
@@ -433,7 +515,11 @@ function App() {
 
                 <div>
                   <span>Databases</span>
-                  <strong>4</strong>
+                  <strong>
+  {reportLoading
+    ? "..."
+    : dashboardSummary?.total_databases ?? securityReport?.total_databases ?? 0}
+</strong>
                 </div>
 
                 <small>
@@ -448,7 +534,11 @@ function App() {
 
                 <div>
                   <span>Total Scans</span>
-                  <strong>48</strong>
+                  <strong>
+  {reportLoading
+    ? "..."
+    : dashboardSummary?.total_scans ?? securityReport?.total_scans ?? 0}
+</strong>
                 </div>
 
                 <small>
@@ -476,26 +566,38 @@ function App() {
                   </div>
 
                   <span className="healthy-badge">
-                    Healthy
-                  </span>
+  {reportLoading
+    ? "Checking..."
+    : dashboardSummary?.system_status ?? securityReport?.system_status ?? "Unknown"}
+</span>
                 </div>
 
                 <div className="score-container">
 
                   <div className="score-circle">
-                    <strong>85</strong>
-                    <span>/ 100</span>
-                  </div>
+  <strong>
+    {reportLoading
+      ? "..."
+      : dashboardSummary?.security_score ?? securityReport?.security_score ?? 0}
+  </strong>
+  <span>/ 100</span>
+</div>
 
                   <div className="score-details">
                     <h4>
-                      Good Security Posture
-                    </h4>
+  {(dashboardSummary?.system_status ?? securityReport?.system_status) === "Critical"
+    ? "Critical Security Posture"
+    : (dashboardSummary?.system_status ?? securityReport?.system_status) === "Warning"
+    ? "Security Attention Required"
+    : "Good Security Posture"}
+</h4>
 
                     <p>
-                      Your infrastructure is currently
-                      operating within a healthy security
-                      range.
+                      {(dashboardSummary?.system_status ?? securityReport?.system_status) === "Critical"
+                        ? "Critical vulnerabilities require immediate attention."
+                        : (dashboardSummary?.system_status ?? securityReport?.system_status) === "Warning"
+                        ? "Your infrastructure requires security attention."
+                        : "Your infrastructure is currently operating within a healthy security range."}
                     </p>
                   </div>
 
@@ -519,8 +621,10 @@ function App() {
 
                   <div>
                     <span className="threat-number critical">
-                      2
-                    </span>
+  {reportLoading
+    ? "..."
+    : dashboardSummary?.critical_threats ?? securityReport?.critical_threats ?? 0}
+</span>
 
                     <small>
                       Critical
@@ -529,7 +633,9 @@ function App() {
 
                   <div>
                     <span className="threat-number high">
-                      5
+                      {reportLoading
+                        ? "..."
+                        : dashboardSummary?.high_threats ?? securityReport?.high_threats ?? 0}
                     </span>
 
                     <small>
@@ -539,7 +645,9 @@ function App() {
 
                   <div>
                     <span className="threat-number medium">
-                      8
+                      {reportLoading
+                        ? "..."
+                        : dashboardSummary?.medium_threats ?? securityReport?.medium_threats ?? 0}
                     </span>
 
                     <small>
@@ -549,7 +657,9 @@ function App() {
 
                   <div>
                     <span className="threat-number low">
-                      12
+                      {reportLoading
+                        ? "..."
+                        : dashboardSummary?.low_threats ?? securityReport?.low_threats ?? 0}
                     </span>
 
                     <small>

@@ -9,5 +9,8 @@ class DashboardSummaryResponse(BaseModel):
     completed_scans: int
     total_threats: int
     critical_threats: int
+    high_threats: int
+    medium_threats: int
+    low_threats: int
     total_incidents: int
     system_status: str

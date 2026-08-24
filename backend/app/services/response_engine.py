@@ -2,7 +2,11 @@ from typing import Dict
 
 from sqlalchemy.orm import Session
 
-from app.features.incidents.service import create_incident
+from app.features.incidents.service import (
+    create_incident,
+    get_active_incident,
+)
+
 from app.features.incidents.schemas import IncidentCreate
 
 from app.features.audit.service import create_audit_log
@@ -14,15 +18,34 @@ def determine_actions(
     pipeline_result: Dict,
 ):
     """
-    Executes automated actions based on
-    the pipeline result.
+    Executes automated response actions based on
+    the security pipeline result.
+
+    Critical:
+        - Create incident if one does not already exist
+        - Write audit log
+        - Queue notification action
+
+    High:
+        - Create incident if one does not already exist
+        - Write audit log
+
+    Medium:
+        - Write audit log
+
+    Low:
+        - Write audit log
     """
 
     actions = []
 
     threat = pipeline_result["threat_detection"]
+    sql_analysis = pipeline_result["sql_analysis"]
 
     risk = threat["overall_risk"]
+    risk_score = threat["risk_score"]
+
+    findings = sql_analysis.get("findings", [])
 
     incident = None
 
@@ -32,37 +55,53 @@ def determine_actions(
 
     if risk == "Critical":
 
-        incident = create_incident(
+        incident_title = "Critical Database Threat"
+
+        existing_incident = get_active_incident(
             db,
-            IncidentCreate(
-                title="Critical Database Threat",
-                description=(
-                    pipeline_result["sql_analysis"]["threat"]
-                ),
-                severity="Critical",
-            ),
+            title=incident_title,
+            severity="Critical",
         )
 
-        create_audit_log(
-            db,
-            AuditLogCreate(
-                username="system",
-                action="Automatic Incident Creation",
-                resource="Security Pipeline",
-                details=(
-                    "Critical threat detected. "
-                    "Incident created automatically."
-                ),
-            ),
-        )
+        if existing_incident:
 
-        actions.extend(
-            [
-                "incident_created",
-                "write_audit_log",
-                "send_notification",
-            ]
-        )
+            incident = existing_incident
+
+            actions.append("incident_already_exists")
+
+        else:
+
+            incident = create_incident(
+                db,
+                IncidentCreate(
+                    title=incident_title,
+                    description=(
+                        "Critical database security threat detected."
+                    ),
+                    severity="Critical",
+                ),
+            )
+
+            create_audit_log(
+                db,
+                AuditLogCreate(
+                    username="system",
+                    action="Automatic Incident Creation",
+                    resource="Security Pipeline",
+                    details=(
+                        "Critical threat detected. "
+                        f"Risk score: {risk_score}. "
+                        f"Findings: {len(findings)}. "
+                        f"Incident #{incident.id} created automatically."
+                    ),
+                ),
+            )
+
+            actions.append("incident_created")
+            actions.append("write_audit_log")
+
+        # Notification is currently an action placeholder.
+        actions.append("send_notification")
 
     # ============================================================
     # HIGH RISK
@@ -70,36 +109,50 @@ def determine_actions(
 
     elif risk == "High":
 
-        incident = create_incident(
+        incident_title = "High Risk Database Threat"
+
+        existing_incident = get_active_incident(
             db,
-            IncidentCreate(
-                title="High Risk Database Threat",
-                description=(
-                    pipeline_result["sql_analysis"]["threat"]
-                ),
-                severity="High",
-            ),
+            title=incident_title,
+            severity="High",
         )
 
-        create_audit_log(
-            db,
-            AuditLogCreate(
-                username="system",
-                action="Automatic Incident Creation",
-                resource="Security Pipeline",
-                details=(
-                    "High-risk threat detected. "
-                    "Incident created automatically."
-                ),
-            ),
-        )
+        if existing_incident:
 
-        actions.extend(
-            [
-                "incident_created",
-                "write_audit_log",
-            ]
-        )
+            incident = existing_incident
+
+            actions.append("incident_already_exists")
+
+        else:
+
+            incident = create_incident(
+                db,
+                IncidentCreate(
+                    title=incident_title,
+                    description=(
+                        "High-risk database security threat detected."
+                    ),
+                    severity="High",
+                ),
+            )
+
+            create_audit_log(
+                db,
+                AuditLogCreate(
+                    username="system",
+                    action="Automatic Incident Creation",
+                    resource="Security Pipeline",
+                    details=(
+                        "High-risk threat detected. "
+                        f"Risk score: {risk_score}. "
+                        f"Findings: {len(findings)}. "
+                        f"Incident #{incident.id} created automatically."
+                    ),
+                ),
+            )
+
+            actions.append("incident_created")
+            actions.append("write_audit_log")
 
     # ============================================================
     # MEDIUM RISK
@@ -113,7 +166,11 @@ def determine_actions(
                 username="system",
                 action="Security Scan",
                 resource="Security Pipeline",
-                details="Medium-risk threat detected.",
+                details=(
+                    "Medium-risk threat detected. "
+                    f"Risk score: {risk_score}. "
+                    f"Findings: {len(findings)}."
+                ),
             ),
         )
 
@@ -131,7 +188,10 @@ def determine_actions(
                 username="system",
                 action="Security Scan",
                 resource="Security Pipeline",
-                details="Low-risk security scan completed successfully.",
+                details=(
+                    "Low-risk security scan completed successfully. "
+                    f"Risk score: {risk_score}."
+                ),
             ),
         )
 

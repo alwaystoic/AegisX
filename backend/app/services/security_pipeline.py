@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 
 from app.utils.scanner import collect_database_health
-
 from app.features.analyzer.service import analyze_query
 
 from app.features.threat_detection.service import detect_threat
@@ -20,9 +19,9 @@ def run_security_pipeline(
     sample_query: str,
 ):
     """
-    Runs the complete security pipeline.
+    Runs the complete AegisX security pipeline.
 
-    Health Scan
+    Database Health
         ↓
     SQL Analyzer
         ↓
@@ -33,35 +32,47 @@ def run_security_pipeline(
     Response Engine
     """
 
-    # ----------------------------------
-    # Step 1 - Database Health
-    # ----------------------------------
+    # ============================================================
+    # STEP 1 - DATABASE HEALTH
+    # ============================================================
 
     health = collect_database_health(db)
 
-    # ----------------------------------
-    # Step 2 - SQL Analysis
-    # ----------------------------------
+    # ============================================================
+    # STEP 2 - SQL ANALYSIS
+    # ============================================================
 
     analyzer_result = analyze_query(sample_query)
 
-    # ----------------------------------
-    # Step 3 - Threat Detection
-    # ----------------------------------
+    # ============================================================
+    # STEP 3 - THREAT DETECTION
+    # ============================================================
 
-    critical = 1 if analyzer_result.severity == "Critical" else 0
-    high = 1 if analyzer_result.severity == "High" else 0
-    medium = 1 if analyzer_result.severity == "Medium" else 0
-    low = 1 if analyzer_result.severity == "Low" else 0
+    findings = analyzer_result.findings
+
+    critical = sum(
+        1 for finding in findings
+        if finding.severity == "Critical"
+    )
+
+    high = sum(
+        1 for finding in findings
+        if finding.severity == "High"
+    )
+
+    medium = sum(
+        1 for finding in findings
+        if finding.severity == "Medium"
+    )
+
+    low = sum(
+        1 for finding in findings
+        if finding.severity == "Low"
+    )
 
     threat_result = detect_threat(
         ThreatDetectionRequest(
-            vulnerability_count=(
-                critical
-                + high
-                + medium
-                + low
-            ),
+            vulnerability_count=len(findings),
             critical_count=critical,
             high_count=high,
             medium_count=medium,
@@ -69,9 +80,9 @@ def run_security_pipeline(
         )
     )
 
-    # ----------------------------------
-    # Step 4 - AI Recommendation
-    # ----------------------------------
+    # ============================================================
+    # STEP 4 - AI RECOMMENDATION
+    # ============================================================
 
     ai_result = generate_recommendation(
         AIRecommendationRequest(
@@ -80,9 +91,9 @@ def run_security_pipeline(
         )
     )
 
-    # ----------------------------------
-    # Step 5 - Build Pipeline Result
-    # ----------------------------------
+    # ============================================================
+    # STEP 5 - BUILD PIPELINE RESULT
+    # ============================================================
 
     pipeline_result = {
         "database_health": health,
@@ -91,9 +102,9 @@ def run_security_pipeline(
         "ai_recommendation": ai_result.model_dump(),
     }
 
-    # ----------------------------------
-    # Step 6 - Execute Automated Actions
-    # ----------------------------------
+    # ============================================================
+    # STEP 6 - AUTOMATED RESPONSE
+    # ============================================================
 
     response_actions = determine_actions(
         db,
