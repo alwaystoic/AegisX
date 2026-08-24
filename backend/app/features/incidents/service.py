@@ -97,7 +97,11 @@ def delete_incident(
     if db_incident is None:
         return None
 
-    db.delete(db_incident)
+    # Soft delete instead of permanently removing the incident
+    db_incident.is_active = False
+    db_incident.status = "Resolved"
+
     db.commit()
+    db.refresh(db_incident)
 
     return db_incident
