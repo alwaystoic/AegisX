@@ -28,4 +28,6 @@ class QueryAnalysisResponse(BaseModel):
     safe: bool
     risk_score: int
     severity: str
+    threat: str
+    recommendation: str
     findings: List[QueryFinding]

@@ -260,6 +260,8 @@ def analyze_query(query: str) -> QueryAnalysisResponse:
             safe=True,
             severity="Low",
             risk_score=0,
+            threat="No issues detected.",
+            recommendation="Query is safe.",
             findings=[],
         )
 
@@ -295,8 +297,10 @@ def analyze_query(query: str) -> QueryAnalysisResponse:
     )
 
     return QueryAnalysisResponse(
-        safe=False,
-        severity=overall_severity,
-        risk_score=overall_risk_score,
-        findings=findings,
-    )
+    safe=False,
+    severity=overall_severity,
+    risk_score=overall_risk_score,
+    threat=highest_finding.threat,
+    recommendation=highest_finding.recommendation,
+    findings=findings,
+)
