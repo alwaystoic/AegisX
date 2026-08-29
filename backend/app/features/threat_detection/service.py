@@ -17,15 +17,21 @@ def detect_threat(
     # Weighted Risk Score
     # -------------------------------
 
-    risk_score = (
-        request.critical_count * 100
-        + request.high_count * 75
-        + request.medium_count * 50
-        + request.low_count * 25
-    )
+    # A completely safe query receives
+    # a baseline Low-risk score of 25.
+    if request.vulnerability_count == 0:
+        risk_score = 25
 
-    # Maximum possible score
-    risk_score = min(risk_score, 100)
+    else:
+        risk_score = (
+            request.critical_count * 100
+            + request.high_count * 75
+            + request.medium_count * 50
+            + request.low_count * 25
+        )
+
+        # Maximum possible score
+        risk_score = min(risk_score, 100)
 
     # -------------------------------
     # Overall Risk

@@ -30,7 +30,10 @@ def get_all_incidents(db: Session):
 
 def get_incident_by_id(db: Session, incident_id: int):
     return db.execute(
-        select(Incident).where(Incident.id == incident_id)
+        select(Incident).where(
+            Incident.id == incident_id,
+            Incident.is_active.is_(True),
+        )
     ).scalar_one_or_none()
 
 

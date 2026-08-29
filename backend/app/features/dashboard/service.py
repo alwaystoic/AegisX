@@ -95,20 +95,13 @@ def get_dashboard_summary(
     # Low      = 1 point
     #
 
-    threat_penalty = (
-        critical_threats * 8
-        + high_threats * 4
-        + medium_threats * 2
-        + low_threats * 1
-    )
-
     security_score = max(
-        0,
-        min(
-            100,
-            100 - threat_penalty
-        )
-    )
+    0,
+    100 - (
+        critical_threats * 15
+        + total_incidents * 5
+    ),
+)
 
     # ----------------------------
     # System Status
