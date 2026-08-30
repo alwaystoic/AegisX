@@ -10,32 +10,25 @@ def detect_threat(
     """
     Threat Detection Engine v2
 
-    Uses weighted severity scoring instead of simple counts.
+    Calculates risk using weighted vulnerability severity.
     """
 
-    # -------------------------------
+    # ------------------------------------------------------------
     # Weighted Risk Score
-    # -------------------------------
+    # ------------------------------------------------------------
 
-    # A completely safe query receives
-    # a baseline Low-risk score of 25.
-    if request.vulnerability_count == 0:
-        risk_score = 25
+    risk_score = (
+        request.critical_count * 100
+        + request.high_count * 75
+        + request.medium_count * 50
+        + request.low_count * 25
+    )
 
-    else:
-        risk_score = (
-            request.critical_count * 100
-            + request.high_count * 75
-            + request.medium_count * 50
-            + request.low_count * 25
-        )
+    risk_score = min(risk_score, 100)
 
-        # Maximum possible score
-        risk_score = min(risk_score, 100)
-
-    # -------------------------------
+    # ------------------------------------------------------------
     # Overall Risk
-    # -------------------------------
+    # ------------------------------------------------------------
 
     if risk_score >= 90:
         overall_risk = "Critical"
@@ -49,45 +42,45 @@ def detect_threat(
     else:
         overall_risk = "Low"
 
-    # -------------------------------
+    # ------------------------------------------------------------
     # Confidence
-    # -------------------------------
+    # ------------------------------------------------------------
 
     confidence = min(
         100,
         70 + (request.vulnerability_count * 5),
     )
 
-    # -------------------------------
+    # ------------------------------------------------------------
     # Recommendation
-    # -------------------------------
+    # ------------------------------------------------------------
 
     if overall_risk == "Critical":
-
         recommendation = (
             "Immediate remediation required. Resolve critical "
             "vulnerabilities before any further database operations."
         )
 
     elif overall_risk == "High":
-
         recommendation = (
             "Prioritize high-risk vulnerabilities and review "
             "database permissions."
         )
 
     elif overall_risk == "Medium":
-
         recommendation = (
             "Schedule remediation during the next maintenance "
             "window and continue monitoring."
         )
 
     else:
-
         recommendation = (
             "Continue routine monitoring and periodic security scans."
         )
+
+    # ------------------------------------------------------------
+    # Response
+    # ------------------------------------------------------------
 
     return ThreatDetectionResponse(
         overall_risk=overall_risk,

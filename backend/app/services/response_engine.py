@@ -22,19 +22,21 @@ def determine_actions(
     the security pipeline result.
 
     Critical:
-        - Create incident if one does not already exist
-        - Write audit log
+        - Reuse an existing active incident if present
+        - Create an incident if one does not exist
+        - Write an audit log when creating an incident
         - Queue notification action
 
     High:
-        - Create incident if one does not already exist
-        - Write audit log
+        - Reuse an existing active incident if present
+        - Create an incident if one does not exist
+        - Write an audit log when creating an incident
 
     Medium:
-        - Write audit log
+        - Write an audit log
 
     Low:
-        - Write audit log
+        - Write an audit log
     """
 
     actions = []
@@ -63,7 +65,7 @@ def determine_actions(
             severity="Critical",
         )
 
-        if existing_incident:
+        if existing_incident is not None:
 
             incident = existing_incident
 
@@ -100,7 +102,7 @@ def determine_actions(
             actions.append("incident_created")
             actions.append("write_audit_log")
 
-        # Notification is currently an action placeholder.
+        # Critical threats always trigger notification.
         actions.append("send_notification")
 
     # ============================================================
@@ -117,7 +119,7 @@ def determine_actions(
             severity="High",
         )
 
-        if existing_incident:
+        if existing_incident is not None:
 
             incident = existing_incident
 
@@ -206,7 +208,7 @@ def determine_actions(
         "actions": actions,
         "incident_id": (
             incident.id
-            if incident
+            if incident is not None
             else None
         ),
     }
