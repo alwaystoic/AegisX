@@ -1,21 +1,23 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    username: str
+    username: str = Field(min_length=1, max_length=50)
     email: EmailStr
-    password: str
-    full_name: str
+    password: str = Field(min_length=1)
+    full_name: str = Field(min_length=1, max_length=100)
+
 
 class UserLogin(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1)
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str
-    
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -24,5 +26,4 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -5,12 +5,31 @@ from app.main import app
 client = TestClient(app)
 
 
+def get_auth_headers():
+    response = client.post(
+        "/users/login",
+        data={
+            "username": "login_test_user",
+            "password": "Test@12345",
+        },
+    )
+
+    assert response.status_code == 200
+
+    token = response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}",
+    }
+
+
 def test_critical_response_reuses_existing_incident():
+    headers = get_auth_headers()
+
     response1 = client.post(
         "/pipeline/run",
-        json={
-            "query": "DROP TABLE users"
-        },
+        headers=headers,
+        json={"query": "DROP TABLE users"},
     )
 
     assert response1.status_code == 200
@@ -22,9 +41,8 @@ def test_critical_response_reuses_existing_incident():
 
     response2 = client.post(
         "/pipeline/run",
-        json={
-            "query": "DROP TABLE users"
-        },
+        headers=headers,
+        json={"query": "DROP TABLE users"},
     )
 
     assert response2.status_code == 200
@@ -38,11 +56,12 @@ def test_critical_response_reuses_existing_incident():
 
 
 def test_high_response_reuses_existing_incident():
+    headers = get_auth_headers()
+
     response1 = client.post(
         "/pipeline/run",
-        json={
-            "query": "UPDATE users SET role = 'admin'"
-        },
+        headers=headers,
+        json={"query": "UPDATE users SET role = 'admin'"},
     )
 
     assert response1.status_code == 200
@@ -54,9 +73,8 @@ def test_high_response_reuses_existing_incident():
 
     response2 = client.post(
         "/pipeline/run",
-        json={
-            "query": "UPDATE users SET role = 'admin'"
-        },
+        headers=headers,
+        json={"query": "UPDATE users SET role = 'admin'"},
     )
 
     assert response2.status_code == 200
@@ -70,11 +88,12 @@ def test_high_response_reuses_existing_incident():
 
 
 def test_low_risk_does_not_create_incident():
+    headers = get_auth_headers()
+
     response = client.post(
         "/pipeline/run",
-        json={
-            "query": "SELECT * FROM users WHERE id = 1"
-        },
+        headers=headers,
+        json={"query": "SELECT * FROM users WHERE id = 1"},
     )
 
     assert response.status_code == 200
@@ -90,11 +109,12 @@ def test_low_risk_does_not_create_incident():
 
 
 def test_critical_response_sends_notification():
+    headers = get_auth_headers()
+
     response = client.post(
         "/pipeline/run",
-        json={
-            "query": "DROP TABLE users"
-        },
+        headers=headers,
+        json={"query": "DROP TABLE users"},
     )
 
     assert response.status_code == 200
@@ -106,11 +126,12 @@ def test_critical_response_sends_notification():
 
 
 def test_high_response_does_not_send_notification():
+    headers = get_auth_headers()
+
     response = client.post(
         "/pipeline/run",
-        json={
-            "query": "UPDATE users SET role = 'admin'"
-        },
+        headers=headers,
+        json={"query": "UPDATE users SET role = 'admin'"},
     )
 
     assert response.status_code == 200
@@ -122,11 +143,12 @@ def test_high_response_does_not_send_notification():
 
 
 def test_critical_duplicate_incident_does_not_create_new_incident():
+    headers = get_auth_headers()
+
     response1 = client.post(
         "/pipeline/run",
-        json={
-            "query": "DROP TABLE users"
-        },
+        headers=headers,
+        json={"query": "DROP TABLE users"},
     )
 
     assert response1.status_code == 200
@@ -140,9 +162,8 @@ def test_critical_duplicate_incident_does_not_create_new_incident():
 
     response2 = client.post(
         "/pipeline/run",
-        json={
-            "query": "DROP TABLE users"
-        },
+        headers=headers,
+        json={"query": "DROP TABLE users"},
     )
 
     assert response2.status_code == 200

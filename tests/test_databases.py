@@ -10,9 +10,9 @@ def test_create_database():
     login_response = client.post(
         "/users/login",
         data={
-            "username": "login_test_user",
-            "password": "Test@12345",
-        },
+    		"username": "auth_admin_test",
+    		"password": "Test@12345",
+	},
     )
 
     assert login_response.status_code == 200
@@ -55,7 +55,7 @@ def test_get_all_databases():
     login_response = client.post(
         "/users/login",
         data={
-            "username": "login_test_user",
+            "username": "auth_admin_test",
             "password": "Test@12345",
         },
     )
@@ -93,7 +93,7 @@ def test_get_database_by_id():
     login_response = client.post(
         "/users/login",
         data={
-            "username": "login_test_user",
+            "username": "auth_admin_test",
             "password": "Test@12345",
         },
     )
@@ -143,7 +143,7 @@ def test_update_database():
     login_response = client.post(
         "/users/login",
         data={
-            "username": "login_test_user",
+            "username": "auth_admin_test",
             "password": "Test@12345",
         },
     )
@@ -204,7 +204,7 @@ def test_delete_database():
     login_response = client.post(
         "/users/login",
         data={
-            "username": "login_test_user",
+            "username": "auth_admin_test",
             "password": "Test@12345",
         },
     )

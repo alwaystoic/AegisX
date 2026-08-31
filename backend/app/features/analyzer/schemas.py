@@ -1,9 +1,13 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel, Field
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(
+        min_length=1,
+        max_length=10000,
+    )
 
 
 class QueryFinding(BaseModel):
@@ -13,7 +17,7 @@ class QueryFinding(BaseModel):
 
     rule: str
     severity: str
-    risk_score: int
+    risk_score: int = Field(ge=0, le=100)
     threat: str
     recommendation: str
 
@@ -26,7 +30,7 @@ class QueryAnalysisResponse(BaseModel):
     """
 
     safe: bool
-    risk_score: int
+    risk_score: int = Field(ge=0, le=100)
     severity: str
     threat: str
     recommendation: str

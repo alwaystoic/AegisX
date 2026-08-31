@@ -8,10 +8,10 @@ def detect_threat(
     request: ThreatDetectionRequest,
 ) -> ThreatDetectionResponse:
     """
-    Threat Detection Engine v2
+    Threat Detection Engine v2.
 
     Calculates risk using weighted vulnerability severity.
-    A clean scan receives a baseline Low risk score of 25.
+    A scan with no vulnerabilities receives a risk score of 0.
     """
 
     # ------------------------------------------------------------
@@ -24,11 +24,6 @@ def detect_threat(
         + request.medium_count * 50
         + request.low_count * 25
     )
-
-    # A completely clean scan still carries a baseline
-    # Low-risk score for monitoring purposes.
-    if risk_score == 0:
-        risk_score = 25
 
     # Keep the score within the valid 0-100 range.
     risk_score = min(risk_score, 100)
