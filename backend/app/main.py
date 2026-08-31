@@ -44,6 +44,7 @@ from app.features.scheduler.router import (
     router as scheduler_router,
 )
 
+from app.models.scheduled_scan import ScheduledScan
 
 # ============================================================
 # DATABASE INITIALIZATION

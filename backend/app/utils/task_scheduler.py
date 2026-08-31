@@ -5,41 +5,45 @@ scheduler = BackgroundScheduler()
 
 
 def start_scheduler():
-    """Starts APScheduler."""
+    """Start APScheduler if it is not already running."""
 
     if not scheduler.running:
         scheduler.start()
 
 
 def stop_scheduler():
-    """Stops APScheduler."""
+    """Stop APScheduler."""
 
     if scheduler.running:
         scheduler.shutdown(wait=False)
 
 
-def add_job(func, minutes: int = 30):
-    """Adds a recurring scheduled job."""
+def add_job(
+    func,
+    job_id: str,
+    minutes: int = 30,
+):
+    """Add or replace a recurring APScheduler job."""
 
     scheduler.add_job(
         func=func,
         trigger="interval",
         minutes=minutes,
-        id="security_pipeline",
+        id=job_id,
         replace_existing=True,
     )
 
 
-def remove_job():
-    """Removes the scheduled job."""
+def remove_job(job_id: str):
+    """Remove a scheduled APScheduler job."""
 
-    job = scheduler.get_job("security_pipeline")
+    job = scheduler.get_job(job_id)
 
     if job:
-        scheduler.remove_job("security_pipeline")
+        scheduler.remove_job(job_id)
 
 
-def get_job():
-    """Returns the security pipeline scheduled job."""
+def get_job(job_id: str):
+    """Return an APScheduler job."""
 
-    return scheduler.get_job("security_pipeline")
+    return scheduler.get_job(job_id)
