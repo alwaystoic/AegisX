@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 
 def collect_database_health(db: Session):
     """
-    Collect basic PostgreSQL health information.
+    Collect PostgreSQL health and security information.
+
+    The collector reports both operational information and
+    security-relevant warnings, particularly for disabled SSL.
     """
 
     version = db.execute(
@@ -43,7 +46,7 @@ def collect_database_health(db: Session):
             """
             SELECT NOW() - pg_postmaster_start_time();
             """
-        )   
+        )
     ).scalar()
 
     extensions = db.execute(
@@ -63,6 +66,30 @@ def collect_database_health(db: Session):
         )
     ).scalar()
 
+    # ------------------------------------------------------------
+    # Security checks
+    # ------------------------------------------------------------
+
+    security_warnings = []
+    security_status = "Secure"
+
+    if str(ssl_status).lower() in {"off", "false", "no"}:
+        security_status = "Warning"
+
+        security_warnings.append(
+            "PostgreSQL SSL is disabled. "
+            "Enable SSL to protect database connections."
+        )
+
+    if not security_warnings:
+        security_warnings.append(
+            "No database security warnings detected."
+        )
+
+    # ------------------------------------------------------------
+    # Response
+    # ------------------------------------------------------------
+
     return {
         "postgres_version": version,
         "database_name": database_name,
@@ -72,4 +99,6 @@ def collect_database_health(db: Session):
         "uptime": str(uptime),
         "extensions": extensions,
         "ssl_status": ssl_status,
-}
+        "security_status": security_status,
+        "security_warnings": security_warnings,
+    }
