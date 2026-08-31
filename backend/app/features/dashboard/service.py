@@ -16,9 +16,9 @@ def get_dashboard_summary(
     db: Session,
 ) -> DashboardSummaryResponse:
 
-    # ----------------------------
-    # Basic Statistics
-    # ----------------------------
+    # ============================================================
+    # BASIC STATISTICS
+    # ============================================================
 
     total_users = db.query(User).count()
 
@@ -34,9 +34,9 @@ def get_dashboard_summary(
         .count()
     )
 
-    # ----------------------------
-    # Threat Statistics
-    # ----------------------------
+    # ============================================================
+    # THREAT STATISTICS
+    # ============================================================
 
     total_threats = db.query(Threat).count()
 
@@ -72,40 +72,58 @@ def get_dashboard_summary(
         .count()
     )
 
-    # ----------------------------
-    # Incident Statistics
-    # ----------------------------
+    # ============================================================
+    # INCIDENT STATISTICS
+    # ============================================================
 
     total_incidents = db.query(Incident).count()
 
-    # ----------------------------
-    # Security Score
-    # ----------------------------
+    # ============================================================
+    # SECURITY SCORE
+    # ============================================================
     #
-    # Security score is calculated from
-    # detected threat severity.
+    # The security score represents the CURRENT security posture.
     #
-    # Historical incidents are NOT used
-    # here because they should not permanently
-    # reduce the security posture.
+    # Historical incidents are intentionally NOT included in the
+    # score because an old/resolved incident should not permanently
+    # reduce the current security posture.
     #
-    # Critical = 8 points
-    # High     = 4 points
-    # Medium   = 2 points
-    # Low      = 1 point
+    # Threat weights:
     #
+    # Critical = 8
+    # High     = 4
+    # Medium   = 2
+    # Low      = 1
+    #
+    # Instead of directly subtracting threat points from 100,
+    # we normalize the risk using:
+    #
+    #     score = 100 * 100 / (100 + weighted_risk)
+    #
+    # This keeps the score between 0 and 100 and prevents the
+    # dashboard from becoming 0 simply because many threats exist.
+    # ============================================================
 
+    weighted_risk = (
+        critical_threats * 8
+        + high_threats * 4
+        + medium_threats * 2
+        + low_threats * 1
+    )
+
+    security_score = round(
+        (100 * 100) / (100 + weighted_risk)
+    )
+
+    # Safety clamp: score must always remain between 0 and 100.
     security_score = max(
-    0,
-    100 - (
-        critical_threats * 15
-        + total_incidents * 5
-    ),
-)
+        0,
+        min(100, security_score),
+    )
 
-    # ----------------------------
-    # System Status
-    # ----------------------------
+    # ============================================================
+    # SYSTEM STATUS
+    # ============================================================
 
     if security_score >= 80:
         system_status = "Healthy"
@@ -116,21 +134,21 @@ def get_dashboard_summary(
     else:
         system_status = "Critical"
 
-    # ----------------------------
-    # Dashboard Response
-    # ----------------------------
+    # ============================================================
+    # DASHBOARD RESPONSE
+    # ============================================================
 
     return DashboardSummaryResponse(
-    security_score=security_score,
-    total_users=total_users,
-    total_databases=total_databases,
-    total_scans=total_scans,
-    completed_scans=completed_scans,
-    total_threats=total_threats,
-    critical_threats=critical_threats,
-    high_threats=high_threats,
-    medium_threats=medium_threats,
-    low_threats=low_threats,
-    total_incidents=total_incidents,
-    system_status=system_status,
-)
+        security_score=security_score,
+        total_users=total_users,
+        total_databases=total_databases,
+        total_scans=total_scans,
+        completed_scans=completed_scans,
+        total_threats=total_threats,
+        critical_threats=critical_threats,
+        high_threats=high_threats,
+        medium_threats=medium_threats,
+        low_threats=low_threats,
+        total_incidents=total_incidents,
+        system_status=system_status,
+    )

@@ -1,4 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.auth.dependencies import get_current_user
+from app.models.user import User
 
 from app.features.analyzer.schemas import (
     QueryRequest,
@@ -8,6 +11,7 @@ from app.features.analyzer.schemas import (
 from app.features.analyzer.service import (
     analyze_query,
 )
+
 
 router = APIRouter(
     prefix="/analyzer",
@@ -19,6 +23,8 @@ router = APIRouter(
     "/analyze",
     response_model=QueryAnalysisResponse,
 )
-def analyze(request: QueryRequest):
-
+def analyze(
+    request: QueryRequest,
+    current_user: User = Depends(get_current_user),
+):
     return analyze_query(request.query)

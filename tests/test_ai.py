@@ -2,12 +2,44 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
+
 client = TestClient(app)
+
+
+def get_auth_headers():
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "login_test_user",
+            "password": "Test@12345",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}",
+    }
+
+
+def test_ai_recommendation_requires_authentication():
+    response = client.post(
+        "/ai/recommend",
+        json={
+            "overall_risk": "CRITICAL",
+            "risk_score": 95,
+        },
+    )
+
+    assert response.status_code == 401
 
 
 def test_ai_recommendation_critical():
     response = client.post(
         "/ai/recommend",
+        headers=get_auth_headers(),
         json={
             "overall_risk": "CRITICAL",
             "risk_score": 95,
@@ -19,6 +51,7 @@ def test_ai_recommendation_critical():
     data = response.json()
 
     assert data["priority"] == "Immediate"
+
     assert data["summary"] == (
         "The scan indicates a critical security posture with multiple "
         "high-risk vulnerabilities requiring immediate attention."
@@ -32,9 +65,11 @@ def test_ai_recommendation_critical():
         "Perform a complete security scan after remediation.",
     ]
 
+
 def test_ai_recommendation_high():
     response = client.post(
         "/ai/recommend",
+        headers=get_auth_headers(),
         json={
             "overall_risk": "HIGH",
             "risk_score": 80,
@@ -46,6 +81,7 @@ def test_ai_recommendation_high():
     data = response.json()
 
     assert data["priority"] == "High"
+
     assert data["summary"] == (
         "The database contains several high-risk vulnerabilities that "
         "should be addressed as soon as possible."
@@ -58,9 +94,11 @@ def test_ai_recommendation_high():
         "Run another scan after applying fixes.",
     ]
 
+
 def test_ai_recommendation_medium():
     response = client.post(
         "/ai/recommend",
+        headers=get_auth_headers(),
         json={
             "overall_risk": "MEDIUM",
             "risk_score": 55,
@@ -72,6 +110,7 @@ def test_ai_recommendation_medium():
     data = response.json()
 
     assert data["priority"] == "Medium"
+
     assert data["summary"] == (
         "The database has moderate security issues that should be "
         "resolved during the next maintenance cycle."
@@ -83,9 +122,11 @@ def test_ai_recommendation_medium():
         "Review user access periodically.",
     ]
 
+
 def test_ai_recommendation_low():
     response = client.post(
         "/ai/recommend",
+        headers=get_auth_headers(),
         json={
             "overall_risk": "LOW",
             "risk_score": 10,
@@ -97,6 +138,7 @@ def test_ai_recommendation_low():
     data = response.json()
 
     assert data["priority"] == "Low"
+
     assert data["summary"] == (
         "The database appears to be secure. Continue following "
         "security best practices."

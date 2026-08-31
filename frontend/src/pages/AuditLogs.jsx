@@ -19,7 +19,14 @@ function AuditLogs() {
         setError("");
 
         try {
-            const response = await fetch(`${API_URL}/audit-logs/`);
+            const token = localStorage.getItem("access_token");
+
+const response = await fetch(`${API_URL}/audit-logs/`, {
+    headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+    },
+});
 
             if (!response.ok) {
                 let errorMessage = `Failed to fetch audit logs (${response.status})`;
@@ -64,7 +71,14 @@ function AuditLogs() {
             setError("");
 
             try {
-                const response = await fetch(`${API_URL}/audit-logs/`);
+                const token = localStorage.getItem("access_token");
+
+const response = await fetch(`${API_URL}/audit-logs/`, {
+    headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+    },
+});
 
                 if (!response.ok) {
                     let errorMessage = `Failed to fetch audit logs (${response.status})`;

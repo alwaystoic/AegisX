@@ -29,13 +29,12 @@ import AIRecommendations from "./pages/AIRecommendations";
 import SecurityPipeline from "./pages/SecurityPipeline";
 import Scheduler from "./pages/Scheduler";
 import Reports from "./pages/Reports";
+import AuditLogs from "./pages/AuditLogs";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    Boolean(localStorage.getItem("access_token"))
-  );
+const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [activePage, setActivePage] = useState("Dashboard");
   const [securityReport, setSecurityReport] = useState(null);
@@ -59,7 +58,8 @@ function App() {
     { name: "AI Recommendations", icon: Bot },
     { name: "Security Pipeline", icon: GitBranch },
     { name: "Scheduler", icon: Clock3 },
-    { name: "Reports", icon: FileText },
+{ name: "Reports", icon: FileText },
+{ name: "Audit Logs", icon: FileText },
   ];
 
   const handleLogin = async (event) => {
@@ -126,7 +126,7 @@ function App() {
 
   useEffect(() => {
   if (!isAuthenticated) {
-    return;
+    return undefined;
   }
 
   const loadSecurityReport = async () => {
@@ -813,20 +813,25 @@ function App() {
         {activePage === "Reports" && (
           <Reports />
         )}
+        {activePage === "Audit Logs" && (
+  <AuditLogs />
+)}
 
         {/* =========================
             PLACEHOLDER PAGES
         ========================= */}
 
+
         {activePage !== "Dashboard" &&
-          activePage !== "Databases" &&
-          activePage !== "Scans" &&
-          activePage !== "Threats" &&
-          activePage !== "Incidents" &&
-          activePage !== "AI Recommendations" &&
-          activePage !== "Security Pipeline" &&
-          activePage !== "Scheduler" &&
-          activePage !== "Reports" && (
+  activePage !== "Databases" &&
+  activePage !== "Scans" &&
+  activePage !== "Threats" &&
+  activePage !== "Incidents" &&
+  activePage !== "AI Recommendations" &&
+  activePage !== "Security Pipeline" &&
+  activePage !== "Scheduler" &&
+  activePage !== "Reports" &&
+  activePage !== "Audit Logs" && (
             <section className="content">
               <div className="panel placeholder-panel">
                 <h3>{activePage}</h3>

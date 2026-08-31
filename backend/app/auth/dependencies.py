@@ -38,8 +38,6 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Support tokens where "sub" contains either
-    # username OR email.
     user = (
         db.query(User)
         .filter(
@@ -59,3 +57,37 @@ def get_current_user(
         )
 
     return user
+
+
+def require_admin(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Allow access only to administrator users.
+    """
+
+    if current_user.role.lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required",
+        )
+
+    return current_user
+
+
+def require_analyst_or_admin(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Allow access to both analysts and administrators.
+    """
+
+    allowed_roles = {"analyst", "admin"}
+
+    if current_user.role.lower() not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+
+    return current_user

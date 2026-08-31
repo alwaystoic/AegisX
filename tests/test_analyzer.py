@@ -5,9 +5,28 @@ from app.main import app
 client = TestClient(app)
 
 
+def get_auth_headers():
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "login_test_user",
+            "password": "Test@12345",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}",
+    }
+
+
 def test_analyze_safe_query():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "SELECT * FROM users WHERE id = 1"
         },
@@ -23,9 +42,11 @@ def test_analyze_safe_query():
     assert data["threat"] == "No issues detected."
     assert data["recommendation"] == "Query is safe."
 
+
 def test_analyze_delete_without_where():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "DELETE FROM users"
         },
@@ -41,9 +62,11 @@ def test_analyze_delete_without_where():
     assert data["threat"] == "DELETE without WHERE clause."
     assert data["recommendation"] == "Add a WHERE clause before executing."
 
+
 def test_analyze_update_without_where():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "UPDATE users SET username = 'admin'"
         },
@@ -58,9 +81,12 @@ def test_analyze_update_without_where():
     assert data["risk_score"] == 85
     assert data["threat"] == "UPDATE without WHERE clause."
     assert data["recommendation"] == "Add a WHERE clause before executing."
+
+
 def test_analyze_drop_table():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "DROP TABLE users"
         },
@@ -78,9 +104,11 @@ def test_analyze_drop_table():
         "Avoid executing DROP TABLE unless absolutely necessary."
     )
 
+
 def test_analyze_drop_database():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "DROP DATABASE production"
         },
@@ -98,9 +126,11 @@ def test_analyze_drop_database():
         "This operation is destructive. Verify before execution."
     )
 
+
 def test_analyze_truncate():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "TRUNCATE TABLE users"
         },
@@ -116,9 +146,11 @@ def test_analyze_truncate():
     assert data["threat"] == "TRUNCATE statement detected."
     assert data["recommendation"] == "Ensure this operation is intentional."
 
+
 def test_analyze_alter_table():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "ALTER TABLE users ADD COLUMN age INT"
         },
@@ -136,9 +168,11 @@ def test_analyze_alter_table():
         "Verify schema modifications before executing."
     )
 
+
 def test_analyze_create_user():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "CREATE USER testuser"
         },
@@ -156,9 +190,11 @@ def test_analyze_create_user():
         "Ensure new users follow the principle of least privilege."
     )
 
+
 def test_analyze_grant_all():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "GRANT ALL PRIVILEGES ON DATABASE testdb TO testuser"
         },
@@ -176,9 +212,11 @@ def test_analyze_grant_all():
         "Grant only the minimum required permissions."
     )
 
+
 def test_analyze_exec():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "EXEC my_procedure"
         },
@@ -196,9 +234,11 @@ def test_analyze_exec():
         "Review the executed procedure for security."
     )
 
+
 def test_analyze_xp_cmdshell():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "EXEC xp_cmdshell 'dir'"
         },
@@ -216,11 +256,16 @@ def test_analyze_xp_cmdshell():
         "Disable xp_cmdshell unless absolutely required."
     )
 
+
 def test_analyze_union_select():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
-            "query": "SELECT username FROM users UNION SELECT password FROM admins"
+            "query": (
+                "SELECT username FROM users "
+                "UNION SELECT password FROM admins"
+            )
         },
     )
 
@@ -236,11 +281,16 @@ def test_analyze_union_select():
         "Validate user input and use parameterized queries."
     )
 
+
 def test_analyze_or_1_equals_1():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
-            "query": "SELECT * FROM users WHERE username = 'admin' OR 1=1"
+            "query": (
+                "SELECT * FROM users "
+                "WHERE username = 'admin' OR 1=1"
+            )
         },
     )
 
@@ -254,9 +304,11 @@ def test_analyze_or_1_equals_1():
     assert data["threat"] == "Possible SQL Injection detected."
     assert data["recommendation"] == "Use parameterized queries."
 
+
 def test_analyze_sql_comment():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "SELECT * FROM users -- bypass authentication"
         },
@@ -274,9 +326,11 @@ def test_analyze_sql_comment():
         "Review the query for possible injection attempts."
     )
 
+
 def test_analyze_multiple_statements():
     response = client.post(
         "/analyzer/analyze",
+        headers=get_auth_headers(),
         json={
             "query": "SELECT * FROM users; DELETE FROM users;"
         },
@@ -293,3 +347,14 @@ def test_analyze_multiple_statements():
     assert data["recommendation"] == (
         "Execute only one statement at a time."
     )
+
+
+def test_analyzer_requires_authentication():
+    response = client.post(
+        "/analyzer/analyze",
+        json={
+            "query": "SELECT * FROM users WHERE id = 1"
+        },
+    )
+
+    assert response.status_code == 401

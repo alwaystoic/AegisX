@@ -119,3 +119,38 @@ def test_high_response_does_not_send_notification():
 
     assert actions["overall_risk"] == "High"
     assert "send_notification" not in actions["actions"]
+
+
+def test_critical_duplicate_incident_does_not_create_new_incident():
+    response1 = client.post(
+        "/pipeline/run",
+        json={
+            "query": "DROP TABLE users"
+        },
+    )
+
+    assert response1.status_code == 200
+
+    actions1 = response1.json()["response_actions"]
+
+    assert actions1["overall_risk"] == "Critical"
+    assert actions1["incident_id"] is not None
+
+    first_incident_id = actions1["incident_id"]
+
+    response2 = client.post(
+        "/pipeline/run",
+        json={
+            "query": "DROP TABLE users"
+        },
+    )
+
+    assert response2.status_code == 200
+
+    actions2 = response2.json()["response_actions"]
+
+    assert actions2["overall_risk"] == "Critical"
+    assert actions2["incident_id"] == first_incident_id
+
+    assert "incident_already_exists" in actions2["actions"]
+    assert "incident_created" not in actions2["actions"]

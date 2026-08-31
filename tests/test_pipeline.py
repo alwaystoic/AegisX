@@ -2,12 +2,43 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
+
 client = TestClient(app)
+
+
+def get_auth_headers():
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "login_test_user",
+            "password": "Test@12345",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}",
+    }
+
+
+def test_pipeline_requires_authentication():
+    response = client.post(
+        "/pipeline/run",
+        json={
+            "query": "SELECT * FROM users WHERE id = 1"
+        },
+    )
+
+    assert response.status_code == 401
 
 
 def test_security_pipeline_safe_query():
     response = client.post(
         "/pipeline/run",
+        headers=get_auth_headers(),
         json={
             "query": "SELECT * FROM users WHERE id = 1"
         },
@@ -35,9 +66,11 @@ def test_security_pipeline_safe_query():
     assert data["response_actions"]["overall_risk"] == "Low"
     assert data["response_actions"]["incident_id"] is None
 
+
 def test_security_pipeline_critical_query():
     response = client.post(
         "/pipeline/run",
+        headers=get_auth_headers(),
         json={
             "query": "DROP TABLE users"
         },
@@ -63,9 +96,11 @@ def test_security_pipeline_critical_query():
     assert "write_audit_log" in data["response_actions"]["actions"]
     assert "send_notification" in data["response_actions"]["actions"]
 
+
 def test_security_pipeline_high_query():
     response = client.post(
         "/pipeline/run",
+        headers=get_auth_headers(),
         json={
             "query": "UPDATE users SET role = 'admin'"
         },
