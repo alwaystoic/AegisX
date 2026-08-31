@@ -11,6 +11,9 @@ from app.features.threat_detection.schemas import (
 from app.features.ai.service import generate_recommendation
 from app.features.ai.schemas import AIRecommendationRequest
 
+from app.features.audit.service import create_audit_log
+from app.features.audit.schemas import AuditLogCreate
+
 from app.services.response_engine import determine_actions
 
 
@@ -94,6 +97,25 @@ def run_security_pipeline(
     )
 
     # ============================================================
+    # SECURITY LOG - THREAT DETECTION
+    # ============================================================
+
+    create_audit_log(
+        db,
+        AuditLogCreate(
+            username="system",
+            action="Threat Detection",
+            resource="Security Pipeline",
+            details=(
+                "Threat detection completed. "
+                f"Overall risk: {threat_result.overall_risk}. "
+                f"Risk score: {threat_result.risk_score}. "
+                f"Findings: {len(findings)}."
+            ),
+        ),
+    )
+
+    # ============================================================
     # STEP 4 - AI RECOMMENDATION
     # ============================================================
 
@@ -125,6 +147,24 @@ def run_security_pipeline(
     )
 
     pipeline_result["response_actions"] = response_actions
+
+    # ============================================================
+    # SECURITY LOG - PIPELINE EXECUTION
+    # ============================================================
+
+    create_audit_log(
+        db,
+        AuditLogCreate(
+            username="system",
+            action="Pipeline Execution",
+            resource="Security Pipeline",
+            details=(
+                "Security pipeline execution completed. "
+                f"Overall risk: {threat_result.overall_risk}. "
+                f"Risk score: {threat_result.risk_score}."
+            ),
+        ),
+    )
 
     # ============================================================
     # FINAL RESULT

@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.db.postgres import engine
@@ -59,6 +61,101 @@ app = FastAPI(
     description="Intelligent Database Security & Self-Healing Platform",
     version=settings.APP_VERSION,
 )
+
+
+# ============================================================
+# GLOBAL ERROR HANDLING
+# ============================================================
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+):
+    """
+    Return a clean and frontend-friendly response for
+    invalid request data.
+    """
+
+    errors = []
+
+    for error in exc.errors():
+        location = ".".join(
+            str(item)
+            for item in error.get("loc", [])
+            if item != "body"
+        )
+
+        message = error.get(
+            "msg",
+            "Invalid request data.",
+        )
+
+        if location:
+            errors.append(
+                f"{location}: {message}"
+            )
+        else:
+            errors.append(message)
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Request validation failed.",
+            "error": "Validation Error",
+            "message": "The request contains invalid data.",
+            "errors": errors,
+        },
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(
+    request: Request,
+    exc: HTTPException,
+):
+    """
+    Preserve FastAPI's standard HTTP error format while
+    adding a consistent error category.
+    """
+
+    if isinstance(exc.detail, str):
+        message = exc.detail
+    else:
+        message = "The request could not be completed."
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "error": "Request Error",
+            "message": message,
+        },
+        headers=exc.headers,
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    """
+    Prevent unexpected backend exceptions from exposing
+    internal implementation details to API clients.
+    """
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error.",
+            "error": "Internal Server Error",
+            "message": (
+                "Something went wrong while processing "
+                "the request."
+            ),
+        },
+    )
 
 
 # ============================================================
