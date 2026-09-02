@@ -5,7 +5,7 @@ const API_URL =
 
 function Scheduler() {
   const [schedulerStatus, setSchedulerStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -60,7 +60,9 @@ function Scheduler() {
     */
 
     const initialLoad = setTimeout(() => {
-      fetchStatus(false);
+      fetchStatus(false).finally(() => {
+        setLoading(false);
+      });
     }, 0);
 
     const interval = setInterval(() => {
@@ -188,6 +190,22 @@ function Scheduler() {
 
   return (
     <div className="scheduler-page">
+      {loading && schedulerStatus === null ? (
+        <div
+          style={{
+            padding: "16px 18px",
+            marginBottom: "20px",
+            borderRadius: "8px",
+            border: "1px solid #1e293b",
+            background: "#0b111c",
+            color: "#94a3b8",
+            fontSize: "13px",
+          }}
+        >
+          Loading scheduler status...
+        </div>
+      ) : null}
+
       {/* ======================================================
           PAGE HEADER
       ====================================================== */}

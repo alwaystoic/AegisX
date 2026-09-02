@@ -125,9 +125,6 @@ function Incidents() {
     let cancelled = false;
 
     const loadIncidents = async () => {
-      setLoading(true);
-      setError("");
-
       try {
         const token = localStorage.getItem("access_token");
 

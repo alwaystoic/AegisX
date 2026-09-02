@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Database,
@@ -44,7 +44,7 @@ function Databases() {
     };
   };
 
-  const loadDatabases = async () => {
+  const loadDatabases = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -70,11 +70,15 @@ function Databases() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadDatabases();
-  }, []);
+    const loadInitialDatabases = async () => {
+      await loadDatabases();
+    };
+
+    loadInitialDatabases();
+  }, [loadDatabases]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

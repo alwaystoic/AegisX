@@ -619,7 +619,27 @@ function AIRecommendations() {
             </p>
           </div>
 
-          {!recommendation ? (
+          {loading ? (
+            <div style={styles.resultEmpty}>
+              <div style={styles.emptyIcon}>
+                <RefreshCw
+                  size={30}
+                  style={{
+                    animation: "ai-spin 1s linear infinite",
+                  }}
+                />
+              </div>
+
+              <h4 style={styles.emptyTitle}>
+                Generating recommendation...
+              </h4>
+
+              <p style={styles.emptyText}>
+                The AegisX intelligence engine is analyzing the current risk
+                posture and preparing prioritized security actions.
+              </p>
+            </div>
+          ) : !recommendation ? (
             <div style={styles.resultEmpty}>
               <div style={styles.emptyIcon}>
                 <Bot size={30} />

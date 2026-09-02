@@ -44,6 +44,7 @@ from app.features.scheduler.router import (
     router as scheduler_router,
 )
 
+from app.features.scheduler.service import start_scheduler
 from app.models.scheduled_scan import ScheduledScan
 
 # ============================================================
@@ -202,6 +203,19 @@ app.include_router(pipeline_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
 app.include_router(scheduler_router)
+
+# ============================================================
+# START SECURITY SCHEDULER
+# ============================================================
+
+from app.db.postgres import SessionLocal
+
+scheduler_db = SessionLocal()
+
+try:
+    start_scheduler()
+finally:
+    scheduler_db.close()
 
 
 # ============================================================

@@ -179,6 +179,7 @@ export default function SecurityPipeline() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
         body: JSON.stringify({
           query: query.trim(),
